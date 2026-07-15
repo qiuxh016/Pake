@@ -1,0 +1,669 @@
+\documentclass[12pt,a4paper]{ctexart}
+
+% === Packages ===
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm,headheight=15pt}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\renewcommand{\tabularxcolumn}[1]{m{#1}}
+
+% === Code style ===
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  showstringspaces=false,
+  tabsize=2,
+}
+% Rust language definition for listings (MiKTeX doesn't ship rust lang by default)
+\lstdefinelanguage{Rust}{
+  keywords={as,async,await,break,const,continue,crate,dyn,else,enum,extern,false,fn,for,if,impl,in,let,loop,match,mod,move,mut,pub,ref,return,self,Self,static,struct,super,trait,true,type,unsafe,use,where,while},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+}
+
+% === Header / Footer ===
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Pake Plus --- 实验报告}
+\fancyhead[R]{\thepage}
+
+% === Title Page ===
+\title{
+  \vspace{3cm}
+  {\Huge \textbf{Pake Plus}}\\[0.5cm]
+  {\Large 基于 Pake 的网页桌面应用增强工具}\\[1cm]
+  {\large 实验报告}
+  \vspace{2cm}
+}
+\author{
+  \begin{tabular}{ll}
+  成员 A & 学号 XXXXXX（广告/跟踪拦截）\\
+  成员 B & 学号 XXXXXX（离线缓存代理）\\
+  成员 C & 学号 XXXXXX（剪贴板管理）\\
+  成员 D & 学号 XXXXXX（设置面板 + 数据迁移 + 诊断 + 视频）\\
+  \end{tabular}
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+% === Abstract ===
+\begin{center}
+  \Large\textbf{摘要}
+\end{center}
+\vspace{0.5cm}
+
+Pake Plus 是基于开源项目 Pake（Rust + Tauri v2）的网页桌面应用增强工具。
+原 Pake 可将任意网页打包为约 5MB 的轻量级桌面应用（仅为 Electron 的 1/20），
+但打包产物仅具备基础窗口功能。
+
+本项目在 Pake 基础上新增四大模块：
+\textbf{广告/跟踪拦截}（EasyList 规则引擎，双重过滤）、
+\textbf{离线缓存代理}（HTTP 层透明缓存，LRU 淘汰）、
+\textbf{剪贴板管理}（系统级 FFI 监听，全文搜索）和
+\textbf{设置面板}（可视化配置、数据迁移、系统诊断、版本回滚）。
+
+技术栈为 Rust + Tauri v2 IPC + 原生 JavaScript，四个模块通过共享 JSON 配置文件实现解耦协作。
+Rust 后端负责系统级操作（文件 I/O、ZIP 打包、系统信息采集、OS FFI），
+JavaScript 前端通过纯 DOM 操作构建用户界面。
+项目总计 43 个 Rust 单元测试、273 个 JavaScript 测试，全部通过，0 warnings。
+
+\vspace{0.5cm}
+\noindent\textbf{关键词}：Rust；Tauri；桌面应用；广告拦截；离线缓存；剪贴板管理；WebView
+
+\newpage
+
+% === TOC ===
+\tableofcontents
+\newpage
+
+% ================================================================
+% Chapter 1
+% ================================================================
+\section{项目名称与团队介绍}
+
+\subsection{项目简介}
+
+Pake Plus 是基于开源项目 Pake（Rust + Tauri v2）的网页桌面应用增强工具。原 Pake 项目可将任意网页打包为轻量级原生桌面应用（约 5MB），但功能仅限基础窗口管理和系统托盘。Pake Plus 在此基础上新增四个独立功能模块，使其更接近一个成熟的桌面浏览器应用。
+
+\subsection{团队成员与分工}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{c>{\centering\arraybackslash}p{3.5cm}X}
+\toprule
+成员   & 负责模块        & 核心工作 \\
+\midrule
+成员 A & 广告/跟踪拦截   & EasyList 规则引擎、网络请求拦截、DOM 元素隐藏、自定义规则、拦截统计 \\
+成员 B & 离线缓存代理   & HTTP 代理拦截、磁盘缓存管理、LRU 淘汰算法、离线模式 \\
+成员 C & 剪贴板管理     & 系统剪贴板监听（FFI）、历史记录面板、全文搜索、自动清理 \\
+成员 D & 设置面板 + 数据 & 可视化配置页面、数据导出/导入（ZIP）、系统诊断、视频制作 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ================================================================
+% Chapter 2
+% ================================================================
+\section{项目背景与目标}
+
+\subsection{选题原因}
+
+Pake 是一个优秀的轻量级桌面应用打包工具，利用系统 WebView 代替 Electron 的 Chromium 内核，
+打包体积仅约 5MB（约 Electron 的 1/20）。然而，原项目在功能层面存在明显不足：
+打包后的应用只是一个"空壳浏览器"，缺少现代桌面浏览器应具备的以下能力：
+
+\begin{enumerate}[label=(\arabic*)]
+  \item 无广告过滤能力 --- 网页中的广告和跟踪脚本原样加载
+  \item 无离线缓存 --- 断网后页面完全无法访问
+  \item 无剪贴板历史 --- 依赖系统剪贴板，复制内容无法回溯
+  \item 无可视化配置 --- 所有参数在打包时通过 CLI 一次性写入，运行时不可修改
+\end{enumerate}
+
+\subsection{改进目标}
+
+本项目旨在解决上述四个痛点，在不显著增加打包体积的前提下，通过 Rust 后端 + Tauri IPC 框架，
+为 Pake 打包的应用增加广告拦截、离线缓存、剪贴板管理和可视化设置四大功能模块。
+
+\subsection{与原项目 Pake 的区别}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lXX}
+\toprule
+对比维度 & 原 Pake & Pake Plus \\
+\midrule
+广告处理   & 无任何广告过滤能力 & EasyList 规则引擎，网络层拦截 + DOM 元素隐藏双重过滤 \\
+离线能力   & 完全依赖网络 & HTTP 层代理缓存，已访问页面断网仍可浏览 \\
+剪贴板能力 & 无历史记录 & 系统剪贴板监听，全文搜索 + 一键复用 \\
+功能配置   & 打包时 CLI 一次性配置 & 运行时可视化面板，修改即时生效并持久化 \\
+数据迁移   & 不支持 & 一键导出 ZIP，换设备导入恢复 \\
+系统诊断   & 无 & 编译信息 + 系统信息，一键复制报告 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ================================================================
+% Chapter 3
+% ================================================================
+\section{系统设计与整体架构}
+
+\subsection{技术栈}
+
+\begin{itemize}
+  \item \textbf{后端}：Rust（Tauri v2 框架）
+  \item \textbf{前端}：TypeScript（CLI）+ JavaScript（WebView 注入）
+  \item \textbf{桌面壳}：系统 WebView（Windows: WebView2，macOS: WKWebView，Linux: WebKitGTK）
+  \item \textbf{IPC}：Tauri Command（Rust ↔ JavaScript 双向调用）
+  \item \textbf{关键 Crates}：zip 2.2、sysinfo 0.33、arboard 3.4、chrono 0.4、built 0.7、serde / serde\_json
+\end{itemize}
+
+\subsection{整体架构图}
+
+\begin{figure}[h]
+\centering
+% TODO: 插入架构图
+% \includegraphics[width=\textwidth]{architecture.png}
+\caption{Pake Plus 系统架构（待插入图片）}
+\end{figure}
+
+\subsection{模块关系}
+
+四个模块在功能层面完全独立，互不依赖：
+
+\begin{itemize}
+  \item A 的广告拦截不需要 B/C/D 的任何功能即可运行
+  \item B 的离线缓存不需要 A/C/D 的任何功能即可运行
+  \item C 的剪贴板管理不需要 A/B/D 的任何功能即可运行
+  \item D 的设置面板通过读/写共享配置文件管理 A/B/C 模块，但不影响各模块独立运行
+\end{itemize}
+
+四个模块通过 D 定义的 \texttt{AppSettings} 数据结构进行配置共享，
+通过 Tauri 的 \texttt{\#[command]} IPC 机制暴露接口给前端调用。
+
+\subsection{文件结构}
+
+\begin{lstlisting}[caption=Pake Plus 代码结构]
+src-tauri/src/
+├── app/
+│   ├── settings/          # [D] 设置面板模块
+│   │   ├── mod.rs         # 模块入口 + 重导出
+│   │   ├── types.rs       # 数据结构 + Theme/Language 枚举
+│   │   ├── traits.rs      # ModuleSettings trait
+│   │   ├── io.rs          # 文件读写 + 版本备份
+│   │   ├── health.rs      # 启动健康检查
+│   │   ├── diagnostics.rs # 诊断信息采集
+│   │   ├── commands.rs    # IPC 命令
+│   │   └── tests.rs       # 单元测试
+│   ├── setup.rs           # 托盘菜单 + 全局快捷键
+│   ├── window.rs          # 窗口创建 + JS 注入
+│   └── ...
+├── inject/
+│   ├── custom.js          # [D] 欢迎页 + 设置面板覆盖层
+│   ├── event.js           # 剪贴板快捷键 + 事件处理
+│   └── ...
+└── lib.rs                 # 应用入口 + 命令注册
+\end{lstlisting}
+
+\subsection{技术亮点}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lXc}
+\toprule
+亮点 & 说明 & 涉及模块 \\
+\midrule
+\textbf{Rust 枚举类型安全} & Theme/Language 从 String 重构为 enum，非法值编译期拒绝，\texttt{\#[serde(alias)]} 向后兼容旧格式 & D \\
+\textbf{ModuleSettings trait 多态} & 每个模块独立实现 \texttt{validate() / summary() / stats()}，IPC 统一调用 & D \\
+\textbf{系统级 FFI 剪贴板监听} & Windows \texttt{AddClipboardFormatListener}，macOS \texttt{NSPasteboard}，跨平台条件编译 & C \\
+\textbf{HTTP 层透明代理缓存} & 基于 Tauri 资源拦截，异步磁盘 I/O，LRU 淘汰算法 & B \\
+\textbf{EasyList 规则引擎} & 网络请求拦截 + DOM 元素隐藏双重过滤，支持自定义规则 & A \\
+\textbf{设置版本备份与自动恢复} & 保存前轮转 5 个历史版本，启动时健康检查自动从备份修复损坏文件 & D \\
+\textbf{模块化文件结构} & 800 行单文件拆为 8 个模块（types / traits / io / health / diagnostics / commands / tests） & D \\
+\textbf{数据可移植性} & 动态扫描数据目录打包 ZIP，导入前预览确认，先备份后覆盖 & D \\
+\bottomrule
+\end{tabularx}
+\caption{技术亮点汇总}
+\end{table}
+
+% ================================================================
+% Chapter 4 (by member)
+% ================================================================
+\section{功能模块实现}
+
+% ---------- 4.1 A ----------
+\subsection{广告拦截模块（成员 A）}
+
+\subsubsection{设计思路}
+
+\begin{itemize}
+  \item \textbf{目标}：基于 EasyList 规则集，在请求层和 DOM 层双重过滤广告内容
+  \item \textbf{Rust 技术}：Tauri 资源请求拦截、规则解析与匹配算法、CSS 样式注入
+  \item \textbf{核心挑战}：规则集庞大（数万条），需高效的匹配性能；页面动态加载的广告需 DOM 监听
+\end{itemize}
+
+% TODO: 成员 A 完善设计思路（300-500 字）
+
+\subsubsection{核心流程}
+
+\begin{enumerate}[label=(\arabic*)]
+  \item 应用启动时加载 EasyList 规则集 + 用户自定义规则
+  \item 注册 Tauri 网络拦截器，对每个请求 URL 进行规则匹配
+  \item 匹配到黑名单规则的请求直接拒绝，节省带宽
+  \item 从规则中提取 CSS 选择器，注入到页面作为隐藏样式
+  \item 监听 DOM 变化（MutationObserver），对动态插入的广告元素实时隐藏
+  \item 托盘图标显示拦截计数
+\end{enumerate}
+
+% TODO: 成员 A 完善流程描述
+
+\subsubsection{关键代码}
+
+\begin{lstlisting}[language=Rust, caption=广告拦截示例代码]
+% TODO: 成员 A 插入核心代码片段（网络拦截器注册、规则匹配、DOM 注入等）
+% 建议 1-2 段关键代码，每段 5-20 行
+\end{lstlisting}
+
+\subsubsection{效果截图}
+
+% TODO: 成员 A 插入截图
+% 建议：1) 未拦截的广告页面  2) 拦截后的清爽页面  3) 自定义规则输入  4) 拦截统计托盘图标
+
+\subsubsection{遇到的问题与解决方案}
+
+% TODO: 成员 A 填写
+
+% ---------- 4.2 B ----------
+\subsection{离线缓存代理模块（成员 B）}
+
+\subsubsection{设计思路}
+
+\begin{itemize}
+  \item \textbf{目标}：在 HTTP 层透明代理请求，将响应缓存到磁盘，支持离线访问
+  \item \textbf{Rust 技术}：异步 I/O（tokio）、资源拦截、LRU 缓存淘汰、HTTP 头解析
+  \item \textbf{核心挑战}：大量并发请求的缓存写入吞吐量；缓存过期策略的准确性；断网判断
+\end{itemize}
+
+% TODO: 成员 B 完善设计思路（300-500 字）
+
+\subsubsection{核心流程}
+
+\begin{enumerate}[label=(\arabic*)]
+  \item 注册 Tauri HTTP 拦截器，拦截所有 GET 请求
+  \item 请求到达时查本地缓存索引，命中且未过期直接返回缓存数据
+  \item 未命中或已过期则放行请求，获取响应后异步写入磁盘
+  \item 维护缓存文件索引（URL 哈希 → 文件路径 → 大小 → 最后访问时间）
+  \item 缓存总量超过上限（默认 200MB）时触发 LRU 淘汰
+  \item 断网时展示离线提示页，列出可访问的已缓存页面
+\end{enumerate}
+
+% TODO: 成员 B 完善流程描述
+
+\subsubsection{关键代码}
+
+\begin{lstlisting}[language=Rust, caption=离线缓存示例代码]
+% TODO: 成员 B 插入核心代码片段（HTTP 拦截器、LRU 淘汰、缓存索引维护等）
+% 建议 1-2 段关键代码，每段 5-20 行
+\end{lstlisting}
+
+\subsubsection{效果截图}
+
+% TODO: 成员 B 插入截图
+% 建议：1) 正常缓存命中统计  2) 断网后页面正常显示  3) 缓存管理设置页  4) 离线提示页
+
+\subsubsection{遇到的问题与解决方案}
+
+% TODO: 成员 B 填写
+
+% ---------- 4.3 C ----------
+\subsection{剪贴板管理模块（成员 C）}
+
+\subsubsection{设计思路}
+
+\begin{itemize}
+  \item \textbf{目标}：系统级剪贴板监听，自动记录文本变化，支持历史搜索和复用
+  \item \textbf{Rust 技术}：Windows FFI（AddClipboardFormatListener）、条件编译、哈希去重
+  \item \textbf{核心挑战}：三套完全不同的 OS API；后台监听降低 CPU 占用；隐私过滤
+\end{itemize}
+
+% TODO: 成员 C 完善设计思路（300-500 字）
+
+\subsubsection{核心流程}
+
+\begin{enumerate}[label=(\arabic*)]
+  \item Rust 后端启动独立线程，调用系统 API 监听剪贴板变化
+  \item 检测到文本变化后计算哈希值去重，写入本地存储
+  \item 用户按 Ctrl+Shift+V 打开历史面板
+  \item 搜索框输入关键词，即时过滤历史记录
+  \item 点击记录复制到系统剪贴板，面板自动关闭
+  \item 后台按规则自动清理（超量 / 超时 / 短文本过滤）
+\end{enumerate}
+
+% TODO: 成员 C 完善流程描述
+
+\subsubsection{关键代码}
+
+\begin{lstlisting}[language=Rust, caption=剪贴板监听示例代码]
+% TODO: 成员 C 插入核心代码片段（OS FFI 剪贴板监听、历史存储、全文搜索等）
+% 建议 1-2 段关键代码，每段 5-20 行
+\end{lstlisting}
+
+\subsubsection{效果截图}
+
+% TODO: 成员 C 插入截图
+% 建议：1) 剪贴板历史面板  2) 搜索过滤效果  3) 一键复制 toast  4) 剪贴板设置页
+
+\subsubsection{遇到的问题与解决方案}
+
+% TODO: 成员 C 填写
+
+% ---------- 4.4 D ----------
+\subsection{设置面板与数据管理模块（成员 D）}
+
+\subsubsection{设计思路}
+
+设置面板是整个 Pake Plus 的"控制中心"，负责统一管理其他三个模块的所有配置。
+本模块的核心设计原则是：\textbf{各模块独立运行，配置集中管理}。
+即使设置面板未打开，各模块使用默认配置正常运行；用户通过面板修改配置后，
+即时写入本地 JSON 文件，各模块下次读取时自动生效。
+
+技术选型方面：
+\begin{itemize}
+  \item \textbf{Rust 后端}：负责 JSON 读写、ZIP 打包解压、系统信息采集、配置校验
+  \item \textbf{JavaScript 前端}：纯原生 JS（无框架），通过 DOM 操作动态构建设置面板 UI
+  \item \textbf{IPC 通信}：基于 Tauri 的 \texttt{\#[command]} 宏，Rust ↔ JS 双向调用
+  \item \textbf{数据持久化}：serde\_json 序列化到本地文件，版本备份 + 自动恢复
+\end{itemize}
+
+\subsubsection{核心流程}
+
+\textbf{设置面板生命周期}：
+
+\begin{enumerate}[label=(\arabic*)]
+  \item 用户通过三种入口之一打开面板（右下角浮动按钮 / 托盘右键 Settings / Ctrl+Shift+,）
+  \item Rust 侧调用 \texttt{window.eval("window.\_\_pakeOpenSettings()")} 触发 JS 构建面板
+  \item JS 调用 \texttt{get\_settings} IPC 命令加载当前配置
+  \item 用户修改表单 → JS 调用 \texttt{validate\_settings} 校验 → 通过后调用 \texttt{save\_settings} 写入磁盘
+  \item 写入时自动轮转备份（保留最近 5 个版本）
+  \item 用户关闭面板时检测是否有未保存修改
+\end{enumerate}
+
+\textbf{数据导出流程}：
+
+\begin{enumerate}[label=(\arabic*)]
+  \item JS 调用 \texttt{export\_data} IPC 命令
+  \item Rust 后端扫描整个 \texttt{AppData} 目录，收集所有数据文件
+  \item 生成 \texttt{manifest.json} 记录文件清单和元数据
+  \item 用 \texttt{zip} crate 打包所有文件为 \texttt{pake-data-YYYYMMDD.zip}
+  \item 保存到用户 Downloads 目录
+\end{enumerate}
+
+\textbf{数据导入流程}：
+
+\begin{enumerate}[label=(\arabic*)]
+  \item JS 调用 \texttt{preview\_import} 展示 ZIP 内容摘要（文件名、大小）
+  \item 用户确认后调用 \texttt{import\_data}
+  \item Rust 解压到临时目录 → 逐文件恢复到数据目录（先备份后覆盖）
+  \item 返回恢复摘要
+\end{enumerate}
+
+\subsubsection{关键代码}
+
+\textbf{1. Rust 枚举类型（类型安全）}
+
+\begin{lstlisting}[language=Rust, caption=Theme 和 Language 枚举]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    Light,
+    Dark,
+    System,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    #[serde(alias = "zh-CN")]
+    Zh,
+    En,
+}
+\end{lstlisting}
+
+\textbf{2. ModuleSettings Trait（多态）}
+
+\begin{lstlisting}[language=Rust, caption=ModuleSettings trait]
+pub trait ModuleSettings {
+    fn validate(&self) -> Vec<String>;      // 校验输入
+    fn summary(&self) -> String;            // 一行摘要
+    fn stats(&self) -> serde_json::Value;   // 统计 JSON
+}
+
+// 每个模块独立实现
+impl ModuleSettings for AdblockSettings { ... }
+impl ModuleSettings for CacheSettings { ... }
+impl ModuleSettings for ClipboardSettings { ... }
+impl ModuleSettings for GeneralSettings { ... }
+\end{lstlisting}
+
+\textbf{3. 配置校验}
+
+\begin{lstlisting}[language=Rust, caption=设置校验逻辑]
+#[command]
+pub fn validate_settings(settings: AppSettings) -> Result<(), Vec<String>> {
+    let mut errors: Vec<String> = Vec::new();
+    errors.extend(settings.adblock.validate());    // 规则格式
+    errors.extend(settings.cache.validate());      // 缓存范围 50-1000
+    errors.extend(settings.clipboard.validate());  // 记录数/天数合法性
+    errors.extend(settings.general.validate());    // 枚举类型编译期保证
+    if errors.is_empty() { Ok(()) } else { Err(errors) }
+}
+\end{lstlisting}
+
+\textbf{4. 备份轮转}
+
+\begin{lstlisting}[language=Rust, caption=设置版本备份]
+const MAX_BACKUPS: u32 = 5;
+
+fn write_settings(app: &AppHandle, settings: &AppSettings) -> Result<(), String> {
+    // 轮转旧备份：v1→v2, v2→v3, ..., v4→v5
+    if path.exists() {
+        for i in (1..MAX_BACKUPS).rev() {
+            let older = path.with_extension(format!("v{}.json", i));
+            let newer = path.with_extension(format!("v{}.json", i + 1));
+            if older.exists() { let _ = fs::rename(&older, &newer); }
+        }
+        // 当前版本 → v1
+        let _ = fs::copy(&path, &path.with_extension("v1.json"));
+    }
+    // 写入新设置
+    fs::write(&path, &json)?;
+    Ok(())
+}
+\end{lstlisting}
+
+\subsubsection{效果截图}
+
+% TODO: 插入以下截图
+\begin{itemize}
+  \item 欢迎页（三模块状态卡片）
+  \item 设置面板 --- 一般标签页（主题/语言/版本历史）
+  \item 设置面板 --- 广告拦截标签页（开关 + 自定义规则）
+  \item 设置面板 --- 离线缓存标签页（开关 + 缓存滑块）
+  \item 设置面板 --- 剪贴板标签页（开关 + 参数设置）
+  \item 设置面板 --- 数据管理标签页（导出 + 导入 + 存储占用）
+  \item 设置面板 --- 关于标签页（诊断信息 + 复制按钮）
+  \item 托盘菜单（状态文字 + Copy Diagnostics）
+  \item 导出进度 + 完成提示
+  \item 导入预览弹窗
+  \item 版本历史 + 回滚确认
+  \item 未保存修改确认弹窗
+\end{itemize}
+
+\subsubsection{遇到的问题与解决方案}
+
+\begin{enumerate}[label=(\arabic*)]
+  \item \textbf{Tauri initializtion\_script 中 document.body 为 null}
+    \\→ 解决：将 DOM 操作包裹在 \texttt{DOMContentLoaded} 事件中，并增加即时检查兜底
+
+  \item \textbf{切换标签页后保存导致其他标签页设置丢失}
+    \\→ 解决：\texttt{doSave} 函数先检查对应元素是否存在于 DOM，不存在则沿用当前 S 状态的值
+
+  \item \textbf{built crate 未启用 git2 feature 导致 GIT\_COMMIT\_HASH 不可用}
+    \\→ 解决：在 Cargo.toml 中添加 \texttt{built = \{ version = "0.7", features = ["git2"] \}}
+
+  \item \textbf{旧设置文件导致新默认值不生效}
+    \\→ 解决：删除旧文件（AppData/Roaming 而非 Local），启动健康检查自动从备份恢复损坏文件
+
+  \item \textbf{Theme/Language 使用 String 类型无法编译期保证合法性}
+    \\→ 解决：重构为 Rust 枚举类型，\texttt{\#[serde(rename\_all = "lowercase")]} 保证序列化兼容
+\end{enumerate}
+
+% ================================================================
+% Chapter 5
+% ================================================================
+\section{实验结果}
+
+\subsection{测试数据}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+测试类型 & 测试数量 & 通过 & 结果 \\
+\midrule
+Rust 后端测试 & 43 & 43 & 全部通过 \\
+JavaScript 测试 & 273 & 273 & 全部通过 \\
+cargo check & --- & --- & 0 warnings \\
+cargo build & --- & --- & 成功 \\
+\bottomrule
+\end{tabular}
+\caption{测试结果汇总}
+\end{table}
+
+\subsection{关键测试用例}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{5cm}l}
+\toprule
+测试用例 & 结果 \\
+\midrule
+默认设置合理性检查 & 通过 \\
+JSON 序列化/反序列化往返 & 通过 \\
+部分 JSON 解析（缺失字段回退默认值） & 通过 \\
+空 JSON 解析 & 通过 \\
+广告拦截规则序列化 & 通过 \\
+Theme 枚举序列化为小写 & 通过 \\
+Theme 枚举反序列化（合法值 + 非法值拒绝） & 通过 \\
+广告规则格式校验（合法 + 非法） & 通过 \\
+缓存大小范围校验（越界 + 合法） & 通过 \\
+剪贴板参数校验（非法值 + 合法值） & 通过 \\
+设置整体校验命令 & 通过 \\
+诊断信息字段完整性 & 通过 \\
+\bottomrule
+\end{tabular}
+\caption{关键测试用例}
+\end{table}
+
+\subsection{命令行示例}
+
+\begin{lstlisting}[caption=CLI 使用示例]
+# 基本打包
+pake https://github.com --name GitHub
+
+# 启用所有 Pake Plus 功能
+pake https://example.com --name MyApp \
+  --block-ads --adblock-rules ./my-rules.txt \
+  --cache --cache-size 500 \
+  --clipboard --clipboard-max 5000
+\end{lstlisting}
+
+% ================================================================
+% Chapter 6
+% ================================================================
+\section{开源项目参考说明}
+
+本项目基于开源项目 \textbf{Pake}（\url{https://github.com/tw93/Pake}）进行二次开发。
+
+\subsection{引用部分}
+
+\begin{itemize}
+  \item Tauri v2 框架及窗口管理、系统托盘、全局快捷键能力
+  \item CLI 打包工具链（TypeScript + Rollup）
+  \item WebView 注入机制（initialization\_script）
+  \item 平台适配配置（tauri.conf.json、pake.json）
+\end{itemize}
+
+\subsection{新增部分（对比原项目）}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lXXc}
+\toprule
+模块 & 新增内容 & 核心技术 & 代码量 \\
+\midrule
+广告拦截   & EasyList 规则引擎、网络拦截、DOM 隐藏、自定义规则 & 请求拦截器 & --- \\
+离线缓存   & HTTP 代理缓存、LRU 淘汰、离线模式、缓存统计 & tokio 异步 I/O & --- \\
+剪贴板     & 系统级监听（FFI）、历史搜索、一键复用、自动清理 & Win32 FFI & --- \\
+设置面板   & 可视化配置、数据导入导出、诊断采集、版本回滚、健康检查 & \texttt{ModuleSettings} trait & $\sim$660 行 \\
+\bottomrule
+\end{tabularx}
+\caption{与 Pake 原项目的差异}
+\end{table}
+
+% ================================================================
+% Chapter 7
+% ================================================================
+\section{总结与展望}
+
+\subsection{项目总结}
+
+Pake Plus 成功在 Pake 的基础上实现了四个独立功能模块：
+
+\begin{itemize}
+  \item 广告拦截引擎基于全球最主流的 EasyList 规则集，网络层 + DOM 层双重过滤
+  \item 离线缓存在 HTTP 层透明代理，实现断网可浏览
+  \item 系统剪贴板管理通过 Rust FFI 调用操作系统 API，跨平台兼容
+  \item 可视化设置面板统一管理所有配置，支持数据一键迁移和系统诊断
+\end{itemize}
+
+项目技术选型合理：Rust 负责系统级操作（文件 I/O、ZIP 打包、系统信息采集、FFI），
+JavaScript 负责用户界面，Tauri IPC 作为两者之间的桥梁。
+四个模块通过共享 JSON 配置文件实现了解耦协作。
+
+\subsection{不足与改进方向}
+
+\begin{enumerate}[label=(\arabic*)]
+  \item \textbf{错误处理}：当前大量使用 \texttt{Result<(), String>}，可通过 \texttt{thiserror} 库定义结构化错误类型
+  \item \textbf{异步 I/O}：IPC 命令中文件操作使用同步 I/O，可能阻塞事件循环，可迁移至 \texttt{tokio::fs}
+  \item \textbf{托盘菜单动态更新}：当前无法在运行时更新菜单项文字，需重建托盘
+  \item \textbf{打包时预设配置}：CLI 尚不支持将设置写入打包产物，需增加 \texttt{---settings} 选项
+  \item \textbf{测试覆盖}：JS 端缺少设置面板相关的自动化测试
+\end{enumerate}
+
+\end{document}

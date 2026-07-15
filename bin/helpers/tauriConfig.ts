@@ -28,9 +28,28 @@ const { platform } = process;
 // @ts-ignore
 const platformConfig = platformConfigs[platform];
 
+function mergeResources(
+  base: unknown,
+  platform: unknown,
+): unknown {
+  if (Array.isArray(base) && Array.isArray(platform)) {
+    return [...base, ...platform];
+  }
+  if (Array.isArray(base)) return base;
+  if (Array.isArray(platform)) return platform;
+  return { ...(base ?? {}), ...(platform ?? {}) };
+}
+
 let tauriConfig = {
   ...CommonConf,
-  bundle: platformConfig.bundle,
+  bundle: {
+    ...(CommonConf.bundle ?? {}),
+    ...platformConfig.bundle,
+    resources: mergeResources(
+      CommonConf.bundle?.resources,
+      platformConfig.bundle?.resources,
+    ),
+  },
   app: {
     ...CommonConf.app,
     trayIcon: {

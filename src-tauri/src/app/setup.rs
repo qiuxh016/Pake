@@ -1,3 +1,4 @@
+use crate::app::settings::open_settings_panel;
 use crate::app::window::open_additional_window_safe;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -9,6 +10,20 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+
+pub fn update_tray_status(app: &AppHandle) {
+    let settings = crate::app::settings::get_settings_inner(app);
+    let text = format!(
+        "Adblock: {}  Cache: {}  Clipboard: {}",
+        if settings.adblock.enabled { "ON" } else { "OFF" },
+        if settings.cache.enabled { "ON" } else { "OFF" },
+        if settings.clipboard.enabled { "ON" } else { "OFF" },
+    );
+    // Rebuild tray to reflect status
+    if let Some(tray) = app.tray_by_id("pake-tray") {
+        let _ = tray.set_tooltip(Some(&text));
+    }
+}
 
 pub fn set_system_tray(
     app: &AppHandle,
@@ -22,28 +37,62 @@ pub fn set_system_tray(
         return Ok(());
     }
 
+    let settings = crate::app::settings::get_settings_inner(app);
+    let status_text_str = format!(
+        "Adblock: {}  Cache: {}  Clipboard: {}",
+        if settings.adblock.enabled { "ON" } else { "OFF" },
+        if settings.cache.enabled { "ON" } else { "OFF" },
+        if settings.clipboard.enabled { "ON" } else { "OFF" },
+    );
+    let status_text = MenuItemBuilder::with_id("status", &status_text_str).build(app)?;
+    let copy_diag = MenuItemBuilder::with_id("copy_diagnostics", "Copy Diagnostics").build(app)?;
+    let sep = tauri::menu::PredefinedMenuItem::separator(app)?;
     let new_window = MenuItemBuilder::with_id("new_window", "New Window").build(app)?;
+    let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
     let hide_app = MenuItemBuilder::with_id("hide_app", "Hide").build(app)?;
     let show_app = MenuItemBuilder::with_id("show_app", "Show").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
-    let menu = if allow_multi_window {
-        MenuBuilder::new(app)
-            .items(&[&new_window, &hide_app, &show_app, &quit])
-            .build()?
-    } else {
-        MenuBuilder::new(app)
-            .items(&[&hide_app, &show_app, &quit])
-            .build()?
-    };
+    let mut items: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = vec![
+        &status_text, &copy_diag, &sep,
+    ];
+    if allow_multi_window {
+        items.push(&new_window);
+    }
+    items.push(&settings);
+    items.push(&hide_app);
+    items.push(&show_app);
+    items.push(&quit);
+
+    let menu = MenuBuilder::new(app).items(&items).build()?;
 
     app.app_handle().remove_tray_by_id("pake-tray");
 
     let mut tray_builder = TrayIconBuilder::new()
         .menu(&menu)
         .on_menu_event(move |app, event| match event.id().as_ref() {
+            "status" => {
+                open_settings_panel(app);
+            }
+            "copy_diagnostics" => {
+                if let Some(window) = app.get_webview_window("pake") {
+                    let _ = window.eval("window.__pakeOpenSettings()");
+                }
+                std::thread::spawn({
+                    let app_h = app.clone();
+                    move || {
+                        let report = crate::app::settings::get_diagnostics_report(&app_h);
+                        if let Ok(mut c) = arboard::Clipboard::new() {
+                            let _ = c.set_text(&report);
+                        }
+                    }
+                });
+            }
             "new_window" => {
                 open_additional_window_safe(app);
+            }
+            "settings" => {
+                open_settings_panel(app);
             }
             "hide_app" => {
                 if let Some(window) = app.get_webview_window("pake") {

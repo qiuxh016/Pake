@@ -2,7 +2,9 @@
 mod app;
 mod util;
 
+use std::str::FromStr;
 use tauri::Manager;
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 use tauri_plugin_window_state::Builder as WindowStatePlugin;
 use tauri_plugin_window_state::StateFlags;
 
@@ -23,6 +25,11 @@ use app::{
     invoke::{
         clear_dock_badge, download_file, increment_dock_badge, send_notification, set_dock_badge,
         set_dock_badge_label, set_zoom, update_theme_mode,
+    },
+    settings::{
+        copy_diagnostics_report, export_data, get_diagnostics, get_module_stats, get_settings,
+        import_data, list_backups, preview_import, reset_settings, rollback_settings,
+        save_settings, validate_settings,
     },
     setup::{set_global_shortcut, set_system_tray},
     window::{open_additional_window_safe, set_window, MultiWindowState},
@@ -195,6 +202,18 @@ pub fn run_app() {
             clear_dock_badge,
             update_theme_mode,
             set_zoom,
+            get_settings,
+            save_settings,
+            reset_settings,
+            validate_settings,
+            get_module_stats,
+            export_data,
+            import_data,
+            preview_import,
+            rollback_settings,
+            list_backups,
+            get_diagnostics,
+            copy_diagnostics_report,
         ])
         .setup(move |app| {
             app.manage(MultiWindowState::new(
@@ -222,7 +241,32 @@ pub fn run_app() {
                 init_fullscreen,
                 multi_window,
             )?;
+            app::setup::update_tray_status(app.app_handle());
+            let health = app::settings::run_health_check(app.app_handle());
+            for msg in &health {
+                eprintln!("[Pake] Health: {}", msg);
+            }
             set_global_shortcut(app.app_handle(), activation_shortcut, init_fullscreen)?;
+
+            // Register settings panel shortcut (Ctrl+Shift+,)
+            {
+                let settings_shortcut =
+                    Shortcut::from_str("Ctrl+Shift+,").expect("Invalid settings shortcut");
+                let app_h = app.app_handle().clone();
+                if let Err(e) = app.app_handle().plugin(
+                    tauri_plugin_global_shortcut::Builder::new()
+                        .with_handler(move |app, event, _s| {
+                            if settings_shortcut.eq(event) {
+                                app::settings::open_settings_panel(app);
+                            }
+                        })
+                        .build(),
+                ) {
+                    eprintln!("[Pake] Failed to register settings shortcut: {e}");
+                } else {
+                    let _ = app_h.global_shortcut().register(settings_shortcut);
+                }
+            }
 
             // Show window after state restoration to prevent position flashing
             // Unless start_to_tray is enabled, then keep it hidden
