@@ -1,7 +1,7 @@
 use super::store::ClipboardStore;
 use std::sync::Arc;
 use tauri::{
-    AppHandle, LogicalPosition, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+    AppHandle, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 
 pub const CLIPBOARD_PANEL_LABEL: &str = "clipboard-panel";
@@ -22,39 +22,24 @@ pub fn ensure_panel_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
             ))
         })?),
     )
-    .title("Clipboard History")
-    .inner_size(320.0, 480.0)
+    .title("剪贴板历史")
+    .inner_size(420.0, 520.0)
     .min_inner_size(320.0, 360.0)
     .resizable(true)
-    .decorations(false)
-    .always_on_top(true)
+    .decorations(true)
+    .always_on_top(false)
     .visible(false)
-    .skip_taskbar(true)
-    .focused(true)
+    .skip_taskbar(false)
+    .center()
     .build()?;
 
-    position_panel_bottom_right(&window)?;
-
     Ok(window)
-}
-
-fn position_panel_bottom_right(window: &WebviewWindow) -> tauri::Result<()> {
-    if let Some(monitor) = window.current_monitor()? {
-        let size = monitor.size();
-        let scale = monitor.scale_factor();
-        let window_size = window.outer_size()?;
-        let x = (size.width as f64 / scale) - (window_size.width as f64 / scale) - 24.0;
-        let y = (size.height as f64 / scale) - (window_size.height as f64 / scale) - 24.0;
-        window.set_position(LogicalPosition::new(x.max(0.0), y.max(0.0)))?;
-    }
-    Ok(())
 }
 
 pub fn toggle_panel(app: &AppHandle) -> tauri::Result<bool> {
     let window = ensure_panel_window(app)?;
     let visible = window.is_visible().unwrap_or(false);
     if !visible {
-        position_panel_bottom_right(&window)?;
         let _ = window.show();
         let _ = window.eval("window.pakeClipboardPanel && window.pakeClipboardPanel.refresh()");
     }
@@ -64,7 +49,6 @@ pub fn toggle_panel(app: &AppHandle) -> tauri::Result<bool> {
 
 pub fn show_panel(app: &AppHandle, query: Option<&str>) -> tauri::Result<()> {
     let window = ensure_panel_window(app)?;
-    position_panel_bottom_right(&window)?;
     let query =
         serde_json::to_string(query.unwrap_or_default()).unwrap_or_else(|_| "\"\"".to_string());
     let _ = window.show();

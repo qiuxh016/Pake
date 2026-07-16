@@ -161,7 +161,17 @@ function buildClipboard(body){
     return r
   }());
 
-  // Hint to open clipboard history via keyboard
+  // Button to open clipboard history panel
+c.appendChild(function(){
+  var r=el('div','padding:12px 0;text-align:center');
+  var b=btn('📋 打开剪贴板历史','width:100%;padding:10px 0;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(59,130,246,.2)');
+  b.onclick=function(){
+    b.textContent='打开中...';b.disabled=true;
+    try{var T=window.__TAURI__||window.__TAURI_INTERNALS__;var inv=T&&(T.invoke||(T.core&&T.core.invoke));if(inv){var emit=T&&T.event&&T.event.emit;if(emit){emit('open-clipboard-panel').then(function(){b.textContent='📋 打开剪贴板历史';b.disabled=false}).catch(function(e){b.textContent='打开失败，请用 Ctrl+Shift+V';b.disabled=false})}else{b.textContent='请用 Ctrl+Shift+V';b.disabled=false}}else{b.textContent='请用 Ctrl+Shift+V';b.disabled=false}}catch(e){b.textContent='请用 Ctrl+Shift+V';b.disabled=false}
+  };
+  r.appendChild(b);return r
+}());
+// Hint to open clipboard history via keyboard
   c.appendChild(function(){
     var h=el('div','margin-top:8px;padding:10px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:11px;line-height:1.6;color:#0369a1');
     h.innerHTML='<strong>⌨ 快捷键</strong><br>按 <b>Ctrl+Shift+V</b> 打开剪贴板历史面板<br>复制文本后可在面板中查看、搜索、复用';

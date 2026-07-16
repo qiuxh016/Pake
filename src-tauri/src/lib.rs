@@ -3,7 +3,7 @@ mod app;
 mod util;
 
 use std::str::FromStr;
-use tauri::Manager;
+use tauri::{Listener, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 use tauri_plugin_window_state::Builder as WindowStatePlugin;
 use tauri_plugin_window_state::StateFlags;
@@ -378,6 +378,15 @@ pub fn run_app() {
                 }
             }
 
+            // Listen for frontend event to open clipboard panel
+            #[cfg(feature = "clipboard")]
+            {
+                let handle = app.app_handle().clone();
+                app.app_handle().listen("open-clipboard-panel", move |_event| {
+                    let _ = app::clipboard::panel::toggle_panel(&handle);
+                });
+            }
+
             // Show window after state restoration to prevent position flashing
             // Unless start_to_tray is enabled, then keep it hidden
             if !start_to_tray {
@@ -410,6 +419,7 @@ pub fn run_app() {
             #[cfg(feature = "clipboard")]
             if _window.label() == app::clipboard::panel::CLIPBOARD_PANEL_LABEL {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = _event {
+                    let _ = _window.hide();
                     api.prevent_close();
                 }
             }
