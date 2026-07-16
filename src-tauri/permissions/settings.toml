@@ -1,0 +1,14 @@
+[[permission]]
+identifier = "allow-settings-commands"
+description = "Allows the settings panel to read/write app settings, run diagnostics, and manage data."
+commands.allow = [
+  "get_settings",
+  "save_settings",
+  "reset_settings",
+  "validate_settings",
+  "get_module_stats",
+  "get_diagnostics",
+  "copy_diagnostics_report",
+  "export_data",
+  "import_data",
+]

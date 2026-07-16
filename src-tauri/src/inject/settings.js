@@ -1,4 +1,4 @@
-(() => {
+(() => { document.title += " [C侧栏已注入]";
   if (window.__pakeClipboardSidebarInstalled) return;
   window.__pakeClipboardSidebarInstalled = true;
 
@@ -95,7 +95,7 @@
       "right:0",
       "bottom:0",
       "z-index:2147483647",
-      "display:block",
+      "display:none",
       "width:min(520px,100vw)",
       "height:100vh",
       "margin:0",
@@ -333,6 +333,7 @@
     const ruleList = shadow.querySelector(".rule-list");
     const command = shadow.querySelector(".command");
     let collapsed = false;
+    let hidden = true;
 
     toggle.addEventListener("click", () => {
       collapsed = !collapsed;
@@ -371,6 +372,22 @@
     });
 
     document.documentElement.append(host);
+
+    window.__pakeToggleClipboardSidebar = function () {
+      hidden = !hidden;
+      if (hidden) {
+        host.style.display = "none";
+      } else {
+        host.style.display = "block";
+        collapsed = false;
+        shell.classList.remove("collapsed");
+        host.style.width = "min(520px, 100vw)";
+        toggle.textContent = "▶";
+        toggle.title = "收起边栏";
+        toggle.setAttribute("aria-label", toggle.title);
+      }
+      return !hidden;
+    };
   }
 
   if (document.readyState === "loading") {

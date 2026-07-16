@@ -290,6 +290,12 @@ pub fn set_global_shortcut(
 
     let last_triggered = Arc::new(Mutex::new(Instant::now()));
 
+    // Pre-compute settings shortcut for use in the handler below.
+    let settings_shortcut = Shortcut::from_str("Ctrl+Shift+Comma").unwrap_or_else(|_| {
+        eprintln!("[Pake] Ctrl+Shift+Comma parse failed, falling back to Ctrl+Alt+S");
+        Shortcut::from_str("Ctrl+Alt+S").expect("Ctrl+Alt+S parse failed")
+    });
+
     if let Err(error) = app.plugin(
         tauri_plugin_global_shortcut::Builder::new()
             .with_handler({
@@ -327,6 +333,12 @@ pub fn set_global_shortcut(
                         .is_some_and(|hotkey| hotkey == event)
                     {
                         let _ = toggle_panel(app);
+                    }
+
+                    // Ctrl+Shift+Comma → open settings panel
+                    if settings_shortcut.eq(event) {
+                        crate::app::settings::open_settings_panel(app);
+                        println!("[Pake] Settings panel opened via shortcut");
                     }
                 }
             })

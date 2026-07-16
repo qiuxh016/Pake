@@ -300,12 +300,6 @@ fn build_window(
         window_builder = window_builder.initialization_script(include_str!("../inject/find.js"));
     }
 
-    #[cfg(feature = "clipboard")]
-    if config.clipboard && label == "pake" {
-        window_builder =
-            window_builder.initialization_script(include_str!("../inject/settings.js"));
-    }
-
     window_builder = window_builder
         .initialization_script(include_str!("../inject/toast.js"))
         .initialization_script(include_str!("../inject/fullscreen.js"))

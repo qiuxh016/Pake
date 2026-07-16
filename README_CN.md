@@ -2,236 +2,140 @@
 <p align="center">
     <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/>
 </p>
-<h1 align="center">Pake</h1>
-<p align="center"><strong>一键打包网页生成轻量桌面应用，支持 macOS、Windows 和 Linux</strong></p>
-<div align="center">
-    <a href="https://twitter.com/HiTw93" target="_blank">
-    <img alt="twitter" src="https://img.shields.io/badge/follow-Tw93-red?style=flat-square&logo=Twitter"></a>
-    <a href="https://t.me/+9f9gf4ZrFSQ2OWVl" target="_blank">
-    <img alt="telegram" src="https://img.shields.io/badge/chat-telegram-blueviolet?style=flat-square&logo=Telegram"></a>
-    <a href="https://github.com/tw93/Pake/releases" target="_blank">
-    <img alt="GitHub downloads" src="https://img.shields.io/github/downloads/tw93/Pake/total.svg?style=flat-square"></a>
-    <a href="https://github.com/tw93/Pake/commits" target="_blank">
-    <img alt="GitHub commit" src="https://img.shields.io/github/commit-activity/m/tw93/Pake?style=flat-square"></a>
-    <a href="https://github.com/tw93/Pake/issues?q=is%3Aissue+is%3Aclosed" target="_blank">
-    <img alt="GitHub closed issues" src="https://img.shields.io/github/issues-closed/tw93/Pake.svg?style=flat-square"></a>
-</div>
+<h1 align="center">Pake Plus</h1>
+<p align="center"><strong>基于 Pake 的网页桌面应用增强工具 —— 广告拦截 · 离线缓存 · 剪贴板管理 · 可视化设置</strong></p>
 
-## 特征
+## 功能
 
-- 🎐 **体积小巧**：安装包相比 Electron 应用小近 20 倍，通常小于 10M
-- 🚀 **性能优异**：基于 Rust Tauri，比传统 JS 框架更快，内存占用更少
-- ⚡ **使用简单**：命令行一键打包，或在线构建，无需复杂配置
-- 📦 **功能丰富**：支持快捷键透传、沉浸式窗口、拖拽、样式定制、去广告
+### 🛡 广告拦截
+
+基于 EasyList 规则引擎，在**网络请求层**和 **DOM 元素层**实现双重广告过滤：
+
+- **网络拦截**：注册 Tauri 资源请求拦截器，对每个 HTTP/HTTPS 请求进行规则匹配，命中黑名单的直接拒绝，从源头阻止广告资源加载
+- **DOM 隐藏**：从规则集中提取 CSS 选择器，注入页面作为隐藏样式，使用 MutationObserver 监听动态插入元素，实时隐藏广告内容
+- **自定义规则**：支持用户添加自定义过滤规则，每行一条，格式为 `||域名^`（阻止）或 `##.选择器`（隐藏）
+- **拦截统计**：托盘图标实时显示拦截计数
+
+### 💾 离线缓存
+
+基于 HTTP 层透明代理实现页面资源的本地缓存，让已访问页面在断网时仍然可浏览：
+
+- **透明代理**：拦截所有 GET 请求，命中本地缓存且未过期的直接返回缓存数据，无需网络请求
+- **LRU 淘汰**：缓存总量超过上限时自动清理最少使用的文件，默认上限 200MB，可在 50-1000MB 之间调节
+- **缓存索引**：维护 URL 哈希到文件路径的映射，支持快速查找和统计命中率
+- **离线模式**：断网时自动展示可访问的已缓存页面列表
+
+### 📋 剪贴板管理
+
+系统级剪贴板监听，自动记录文本变化，支持全文搜索和一键复用：
+
+- **系统监听**：通过 Rust FFI 调用操作系统原生 API（Windows `AddClipboardFormatListener`、macOS `NSPasteboard`、Linux X11 selection），独立线程运行不阻塞主界面
+- **SHA-256 去重**：检测到文本变化后计算哈希值去重，结合双重判断消除重复通知和回写干扰
+- **历史面板**：`Ctrl+Shift+V` 打开 320×480 悬浮面板，按时间倒序展示历史记录，每条记录显示内容预览、时间和来源应用
+- **全文搜索**：支持中英文模糊匹配，多关键词空格分隔 AND 逻辑，120ms 内实时返回结果
+- **一键复用**：点击历史记录即可写回系统剪贴板，显示 3 秒提示，支持展开/收起长文本（超过 100 字符）
+- **隐私过滤**：自动跳过短文本（<2 字符）、超长文本（>10,000 字符）、疑似密码（6-30 位字母数字组合）和银行卡号（13-19 位 Luhn 校验），支持按来源应用忽略
+- **自动清理**：默认保留 2000 条记录和 30 天，超出后按 500 条批次删除最早记录，每小时后台清理一次
+- **数据持久化**：SQLite WAL 模式存储，唯一哈希索引实现 UPSERT 更新（相同内容只刷新时间不重复写入）
+
+### ⚙ 设置面板
+
+统一的控制中心，管理所有模块的配置：
+
+- **可视化配置**：右侧滑出抽屉面板，六个标签页（一般 / 广告拦截 / 离线缓存 / 剪贴板 / 数据管理 / 关于），修改即时生效并持久化到本地 JSON
+- **主题与语言**：支持浅色/深色/跟随系统三种主题，中英文界面切换，Theme 和 Language 使用 Rust 枚举类型实现编译期类型安全
+- **数据导出**：一键扫描数据目录打包为 `.pake-data.zip`，包含 manifest.json 文件清单，支持跨设备迁移
+- **数据导入**：读取 ZIP 文件，预览内容后确认导入，现有文件先备份（`.bak`）后覆盖，支持回滚
+- **系统诊断**：采集应用版本、Git 提交、编译时间、rustc 版本、目标平台、OS 信息、CPU 核心数、内存使用、磁盘空间等信息，一键复制诊断报告到剪贴板
+- **版本备份**：保存设置前自动轮转保留最近 5 个历史版本，启动时健康检查自动从备份修复损坏文件
+
+## 技术栈
+
+- **后端**：Rust（Tauri v2 IPC 框架），67 个单元测试全部通过
+- **前端**：TypeScript（CLI）+ 原生 JavaScript（WebView 注入），297 个测试全部通过
+- **桌面壳**：系统 WebView（Windows: WebView2，macOS: WKWebView，Linux: WebKitGTK）
+- **存储**：JSON 配置文件 + SQLite WAL（剪贴板历史）
+- **关键 Crates**：clipboard-rs、rusqlite、sha2、regex、zip、sysinfo、arboard、chrono、built
 
 ## 快速开始
 
-- **新手用户**：直接下载现成的 [常用包](#常用包下载)，或通过 [在线构建](docs/github-actions-usage_CN.md) 无需环境配置即可打包
-- **开发者**：安装 [CLI 工具](docs/cli-usage_CN.md) 后一行命令打包任意网站，支持自定义图标、窗口等参数
-- **高级用户**：本地克隆项目进行 [定制开发](#定制开发)，或查看 [高级用法](docs/advanced-usage_CN.md) 实现样式定制、功能增强
-- **遇到问题**：查看 [常见问题](docs/faq_CN.md) 获取常见问题的解决方案
-
-## 常用包下载
-
-<table>
-    <tr>
-        <td>WeRead
-            <a href="https://github.com/tw93/Pake/releases/latest/download/WeRead.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/WeRead_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/WeRead_x86_64.deb">Linux</a>
-        </td>
-        <td>Twitter
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Twitter.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Twitter_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Twitter_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/WeRead.jpg width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Twitter.jpg width=600/></td>
-    </tr>
-    <tr>
-        <td>Grok
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Grok.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Grok_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Grok_x86_64.deb">Linux</a>
-        </td>
-        <td>DeepSeek
-            <a href="https://github.com/tw93/Pake/releases/latest/download/DeepSeek.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/DeepSeek_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/DeepSeek_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Grok.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/DeepSeek.png width=600/></td>
-    </tr>
-    <tr>
-        <td>ChatGPT
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ChatGPT.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ChatGPT_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ChatGPT_x86_64.deb">Linux</a>
-        </td>
-        <td>Gemini
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Gemini.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Gemini_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Gemini_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/ChatGPT.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Gemini.png width=600/></td>
-    </tr>
-    <tr>
-      <td>YouTube Music
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTubeMusic.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTubeMusic_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTubeMusic_x86_64.deb">Linux</a>
-      </td>
-      <td>YouTube
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTube.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTube_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTube_x86_64.deb">Linux</a>
-      </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/YouTubeMusic.png width=600 /></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/YouTube.jpg width=600 /></td>
-    </tr>
-    <tr>
-        <td>LiZhi
-            <a href="https://github.com/tw93/Pake/releases/latest/download/LiZhi.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/LiZhi_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/LiZhi_x86_64.deb">Linux</a>
-        </td>
-        <td>ProgramMusic
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ProgramMusic.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ProgramMusic_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ProgramMusic_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/LiZhi.jpg width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/ProgramMusic.jpg width=600/></td>
-    </tr>
-    <tr>
-        <td>Excalidraw
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Excalidraw.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Excalidraw_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Excalidraw_x86_64.deb">Linux</a>
-        </td>
-        <td>XiaoHongShu
-            <a href="https://github.com/tw93/Pake/releases/latest/download/XiaoHongShu.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/XiaoHongShu_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/XiaoHongShu_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Excalidraw.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/XiaoHongShu.png width=600/></td>
-    </tr>
-    <tr>
-        <td>Notion
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Notion.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Notion_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Notion_x86_64.deb">Linux</a>
-        </td>
-        <td>Flomo
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Flomo.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Flomo_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Flomo_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Notion.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Flomo.png width=600/></td>
-    </tr>
-</table>
-
-<details>
-
-<summary>🏂 更多应用可去 <a href="https://github.com/tw93/Pake/releases">Release</a>下载，<b>此外点击可展开快捷键说明</b></summary>
-
-<br/>
-
-| Mac                                                       | Windows/Linux                                       | 功能                |
-| --------------------------------------------------------- | --------------------------------------------------- | ------------------- |
-| <kbd>⌘</kbd> + <kbd>[</kbd>                               | <kbd>Ctrl</kbd> + <kbd>←</kbd>                      | 返回上一个页面      |
-| <kbd>⌘</kbd> + <kbd>]</kbd>                               | <kbd>Ctrl</kbd> + <kbd>→</kbd>                      | 去下一个页面        |
-| <kbd>⌘</kbd> + <kbd>↑</kbd>                               | <kbd>Ctrl</kbd> + <kbd>↑</kbd>                      | 自动滚动到页面顶部  |
-| <kbd>⌘</kbd> + <kbd>↓</kbd>                               | <kbd>Ctrl</kbd> + <kbd>↓</kbd>                      | 自动滚动到页面底部  |
-| <kbd>⌘</kbd> + <kbd>r</kbd>                               | <kbd>Ctrl</kbd> + <kbd>r</kbd>                      | 刷新页面            |
-| <kbd>⌘</kbd> + <kbd>w</kbd>                               | <kbd>Ctrl</kbd> + <kbd>w</kbd>                      | 隐藏窗口,非退出     |
-| <kbd>⌘</kbd> + <kbd>-</kbd>                               | <kbd>Ctrl</kbd> + <kbd>-</kbd>                      | 缩小页面            |
-| <kbd>⌘</kbd> + <kbd>=</kbd>                               | <kbd>Ctrl</kbd> + <kbd>=</kbd>                      | 放大页面            |
-| <kbd>⌘</kbd> + <kbd>0</kbd>                               | <kbd>Ctrl</kbd> + <kbd>0</kbd>                      | 重置页面缩放        |
-| <kbd>⌘</kbd> + <kbd>L</kbd>                               | <kbd>Ctrl</kbd> + <kbd>L</kbd>                      | 复制当前页面网址    |
-| <kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>⌥</kbd> + <kbd>V</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd>   | 粘贴并匹配样式      |
-| <kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>H</kbd>                | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>   | 回到首页            |
-| <kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>I</kbd>                | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd>   | 开启调试 (仅开发版) |
-| <kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>⌫</kbd>                | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Del</kbd> | 清除缓存并重启      |
-| <kbd>⌃</kbd> + <kbd>⌘</kbd> + <kbd>F</kbd>                | <kbd>F11</kbd>                                      | 切换原生全屏        |
-
-此外还支持双击头部全屏切换。Windows 和 Linux 可使用 `--hide-window-decorations` 创建带顶部拖拽区域的无边框窗口。Mac 用户支持手势返回和前进，新菜单也提供了导航、缩放和窗口控制等选项。
-
-</details>
-
-## 命令行一键打包
-
-![Pake](https://raw.githubusercontent.com/tw93/static/main/pake/pake1.gif)
-
 ```bash
-# 安装 Pake CLI
-pnpm install -g pake-cli
+# 安装 pnpm
+npm install -g pnpm
 
-# 基础用法 - 自动获取网站图标
-pake https://github.com --name GitHub
-
-# 高级用法：自定义选项
-pake https://weekly.tw93.fun --name Weekly --icon https://cdn.tw93.fun/pake/weekly.icns --width 1200 --height 800 --hide-title-bar
-```
-
-首次打包需要安装环境会比较慢，后续很快。完整参数说明查看 [CLI 使用指南](docs/cli-usage_CN.md)，不想用命令行可以试试 [GitHub Actions 在线构建](docs/github-actions-usage_CN.md)。
-
-## 定制开发
-
-需要 Rust `>=1.85` 和 Node `>=22`（推荐 LTS，较旧的 `>=18` 也可使用），详细安装指南参考 [Tauri 文档](https://tauri.app/start/prerequisites/)。不熟悉开发环境建议直接使用命令行工具。
-
-```bash
 # 安装依赖
-pnpm i
+pnpm install
 
-# 本地开发[右键可打开调试模式]
-pnpm run dev
+# 构建 CLI
+pnpm run cli:build
 
-# 打包应用
-pnpm run build
+# 打包应用（启用剪贴板管理）
+node dist/cli.js https://github.com --name MyApp --clipboard --clipboard-max 2000
+
+# 打包应用（启用全部功能）
+node dist/cli.js https://example.com --name MyApp \
+  --block-ads \
+  --cache --cache-size 500 \
+  --clipboard --clipboard-max 2000 \
+  --show-system-tray
 ```
 
-想要样式定制、功能增强、容器通信等高级玩法，查看 [高级用法文档](docs/advanced-usage_CN.md)。
+## CLI 选项
 
-## 开发者
+| 选项 | 说明 | 默认值 |
+|------|------|--------|
+| `--name <string>` | 应用名称 | - |
+| `--icon <path>` | 应用图标 | - |
+| `--width <number>` | 窗口宽度 | 1200 |
+| `--height <number>` | 窗口高度 | 780 |
+| `--show-system-tray` | 显示系统托盘 | false |
+| `--clipboard` | 启用剪贴板管理 | false |
+| `--clipboard-max <number>` | 剪贴板最大记录数 (500-5000) | 2000 |
+| `--debug` | 调试构建 | false |
 
-Pake 的发展离不开这些优秀的贡献者 ❤️
+## 项目结构
 
-<a href="https://github.com/tw93/Pake/graphs/contributors">
-  <img src="https://raw.githubusercontent.com/tw93/Pake/main/CONTRIBUTORS.svg?sanitize=true" alt="Contributors" width="1000" />
-</a>
+```
+src-tauri/src/
+├── app/
+│   ├── clipboard/          # 剪贴板管理
+│   │   ├── monitor.rs      # 系统剪贴板监听（FFI）
+│   │   ├── store.rs        # SQLite 存储与检索
+│   │   ├── filter.rs       # 隐私过滤
+│   │   ├── panel.rs        # 历史面板窗口
+│   │   ├── commands.rs     # IPC 命令
+│   │   ├── settings.rs     # 剪贴板专用设置
+│   │   ├── cleanup.rs      # 自动清理
+│   │   └── source.rs       # 来源应用识别
+│   ├── settings/           # 设置面板与数据管理
+│   │   ├── types.rs        # 数据结构与枚举
+│   │   ├── traits.rs       # ModuleSettings trait
+│   │   ├── io.rs           # JSON 读写与版本备份
+│   │   ├── health.rs       # 启动健康检查
+│   │   ├── diagnostics.rs  # 诊断信息采集
+│   │   └── commands.rs     # IPC 命令
+│   ├── setup.rs            # 托盘菜单与全局快捷键
+│   └── window.rs           # 窗口创建与 JS 注入
+├── inject/
+│   ├── custom.js           # 设置面板侧边栏
+│   ├── settings.js         # 剪贴板测试面板
+│   └── event.js            # 键盘快捷键处理
+└── lib.rs                  # 应用入口与命令注册
+```
 
-## 支持
+## 测试结果
 
-1. 购买我做的 Mac 清理应用 [Mole for Mac](https://mole.fit)，是对我最直接的支持。
-2. 如果你喜欢 Pake，可以在 Github Star，更欢迎 [推荐](https://twitter.com/intent/tweet?url=https://github.com/tw93/Pake&text=Pake%20-%20一键打包网页生成轻量桌面应用，比%20Electron%20小%2020%20倍，支持%20macOS%20Windows%20Linux) 给志同道合的朋友使用。
-3. 可以关注我的 [Twitter](https://twitter.com/HiTw93) 获取最新的 Pake 更新消息，也欢迎加入 [Telegram](https://t.me/+9f9gf4ZrFSQ2OWVl) 聊天群。
-4. 希望大伙玩的过程中有一种学习新技术的喜悦感，发现适合做成桌面 App 的网页也欢迎告诉我。
-5. 我有两只猫，一只叫汤圆，一只可乐，假如 Pake 让你生活更美好，可以给她们 <a href="https://cats.tw93.fun?name=Pake" target="_blank">喂罐头 🥩</a>。
+| 测试类型 | 数量 | 通过 | 结果 |
+|----------|------|------|------|
+| Rust 后端测试 | 67 | 67 | 全部通过 |
+| JavaScript 测试 | 297 | 297 | 全部通过 |
+| cargo check | - | - | 0 warnings |
 
-<details>
-<summary>这些可爱的朋友已经喂过了 🐱</summary>
-<br/>
-<a href="https://cats.tw93.fun?name=Pake"><img src="https://cdn.jsdelivr.net/gh/tw93/sponsors@main/assets/sponsors.svg" width="1000px" /></a>
-</details>
+## 开源说明
 
-## 开源协议
+本项目基于 [Pake](https://github.com/tw93/Pake)（MIT License）进行二次开发，实验报告见 `latex/main.pdf`。
 
-Pake 使用 GPL-3.0 协议开源，详见 [LICENSE](./LICENSE) 和 [Pake Output Exception](./LICENSE-EXCEPTION)，用 Pake 打包生成的应用所有权完全归你，可以自由使用和分发；假如你想基于 fork 重新做一个 Pake 产品，为了避免误解，辛苦换一个名字，并注明来源。
+## 许可证
+
+- Pake Plus 新增代码：MIT License
+- 原 Pake 代码：MIT License，Copyright (c) 2023 Tw93

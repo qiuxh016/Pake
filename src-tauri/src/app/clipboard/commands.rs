@@ -210,7 +210,11 @@ pub fn clipboard_hide_panel(app: AppHandle) -> Result<(), String> {
 
 #[command]
 pub fn clipboard_show_panel(app: AppHandle, query: Option<String>) -> Result<(), String> {
-    panel::show_panel(&app, query.as_deref()).map_err(|error| error.to_string())
+    eprintln!("[Pake] clipboard_show_panel called, query={:?}", query);
+    match panel::show_panel(&app, query.as_deref()) {
+        Ok(()) => { eprintln!("[Pake] clipboard_show_panel OK"); Ok(()) }
+        Err(e) => { eprintln!("[Pake] clipboard_show_panel error: {e}"); Err(e.to_string()) }
+    }
 }
 
 #[command]

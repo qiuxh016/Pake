@@ -1,8 +1,10 @@
 // Pake Plus Settings Panel
+window.__pakeDebug={invoke:function(n){var t=window.__TAURI__;return t?t.core.invoke(n).then(function(r){alert('OK: '+JSON.stringify(r))}).catch(function(e){alert('ERR: '+e)}):alert('No __TAURI__')}};
+document.title += ' [D面板已注入]';
 (function(){'use strict';
 
 var P=null,S=null,T='general',theme='light',lang='zh',dirty=false;
-var I=function(c,a){return(window.__TAURI_INTERNALS__||window.__TAURI__.core).invoke(c,a)};
+var I=function(c,a){try{var t=window.__TAURI__||window.__TAURI_INTERNALS__;var inv=t&&(t.invoke||(t.core&&t.core.invoke));if(!inv){console.error('No Tauri invoke API found');return Promise.reject('No Tauri API')}return inv(c,a)}catch(e){console.error('I() error:',e);return Promise.reject(e)}};
 var L={zh:{title:'Pake Plus',sub:'设置面板',ng:'一般',na:'广告拦截',nc:'离线缓存',nl:'剪贴板',nd:'数据管理',ni:'关于',gt:'一般设置',gd:'应用外观与行为',tl:'暗色主题',th:'切换面板配色',ll:'界面语言',rl:'恢复默认设置',rh:'将所有设置重置为出厂值',rb:'恢复默认',at:'广告拦截',ad:'基于 EasyList 规则引擎，双重过滤',ae:'启用拦截',ah:'自动过滤广告与跟踪请求',ar:'自定义规则',arh:'每行一条，||匹配域名 ##隐藏元素',arb:'高级',ct:'离线缓存',cd:'HTTP 层代理缓存，断网也能浏览',ce:'启用缓存',ceh:'自动缓存浏览过的资源',cl:'缓存上限',cs:'统计',ch:'命中率（近1小时）',pt:'剪贴板管理',pd:'系统级监听，历史记录一键复用',pe:'启用监听',peh:'后台自动记录剪贴板变化',pm:'最大记录数',pr:'保留天数',ps:'忽略短文本',psh:'少于 2 字符不记录',dt:'数据管理',dd:'一键导出或导入，轻松迁移设备',de:'导出数据',ded:'打包为 .pake-data.zip',deb:'导出',di:'导入数据',did:'从下载目录读取恢复',dib:'导入',ot:'关于',od:'系统诊断信息',oa:'应用信息',os:'系统信息',oc:'复制诊断报告',sv:'保存设置',cc:'取消',ts:'已保存',tl2:'加载失败',tr:'已恢复默认',tf:'保存失败',tex:'导出中...',teok:'导出完成',tef:'导出失败',tim:'导入中...',tiok:'导入完成',tif:'导入失败',tc:'已复制',tcf:'复制失败',v:'版本',gi:'Git',bt:'编译时间',ru:'rustc',tg:'Target',fe:'启用功能',o:'OS',cp:'CPU',rm:'内存',dk:'磁盘可用',pi:'PID'},
 en:{title:'Pake Plus',sub:'Settings',ng:'General',na:'Adblock',nc:'Cache',nl:'Clipboard',nd:'Data',ni:'About',gt:'General',gd:'Appearance & behavior',tl:'Dark theme',th:'Toggle panel colors',ll:'Language',rl:'Reset defaults',rh:'Restore factory settings',rb:'Reset',at:'Adblock',ad:'EasyList engine, dual filtering',ae:'Enable',ah:'Filter ads & tracking',ar:'Custom rules',arh:'One per line, ||domain or ##.selector',arb:'Advanced',ct:'Cache',cd:'HTTP proxy, offline browsing',ce:'Enable',ceh:'Auto-cache resources',cl:'Cache limit',cs:'Statistics',ch:'Hit rate (1h)',pt:'Clipboard',pd:'System monitor, history reuse',pe:'Enable',peh:'Auto-record clipboard',pm:'Max records',pr:'Retention',ps:'Ignore short',psh:'Skip <2 chars',dt:'Data',dd:'Export or import data',de:'Export',ded:'Package as .pake-data.zip',deb:'Export',di:'Import',did:'Read from Downloads',dib:'Import',ot:'About',od:'System diagnostics',oa:'App Info',os:'System Info',oc:'Copy Report',sv:'Save',cc:'Cancel',ts:'Saved',tl2:'Load failed',tr:'Defaults restored',tf:'Save failed',tex:'Exporting...',teok:'Export complete',tef:'Export failed',tim:'Importing...',tiok:'Import complete',tif:'Import failed',tc:'Copied',tcf:'Copy failed',v:'Version',gi:'Git',bt:'Built',ru:'rustc',tg:'Target',fe:'Features',o:'OS',cp:'CPU',rm:'Memory',dk:'Disk free',pi:'PID'}};
 function t(k){return(L[lang]||L.zh)[k]||k}
@@ -151,9 +153,24 @@ function buildClipboard(body){
   var s2=el('select','padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;background:#f8fafc;color:#334155;outline:none;cursor:pointer');s2.id='__ps_cret__';s2.innerHTML='<option value="7">7</option><option value="14">14</option><option value="30" selected>30</option><option value="0">∞</option>';
   c.appendChild(row(t('pr'),null,s2));
   c.appendChild(row(t('ps'),t('psh'),tg('__ps_cshort__')));
-}
 
-function buildData(body){
+  // Clipboard stats - use the Rust global shortcut path
+  c.appendChild(function(){
+    var r=el('div','padding:4px 0;display:flex;align-items:center;gap:8px');
+    r.innerHTML='<span style="font-size:11px;color:#64748b">📊 剪贴板状态: </span><span id="__ps_cstats__" style="font-size:11px;font-weight:600;color:#334155">已启用</span>';
+    return r
+  }());
+
+  // Hint to open clipboard history via keyboard
+  c.appendChild(function(){
+    var h=el('div','margin-top:8px;padding:10px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:11px;line-height:1.6;color:#0369a1');
+    h.innerHTML='<strong>⌨ 快捷键</strong><br>按 <b>Ctrl+Shift+V</b> 打开剪贴板历史面板<br>复制文本后可在面板中查看、搜索、复用';
+    return h
+  }());
+
+  // Try to load stats via IPC as well (may fail silently)
+  try{var T=window.__TAURI__||window.__TAURI_INTERNALS__;if(T){var inv=T.invoke||(T.core&&T.core.invoke);if(inv){inv('clipboard_stats').then(function(st){var el=document.getElementById('__ps_cstats__');if(el&&st)el.textContent='共 '+(st.total||0)+' 条，已启用'}).catch(function(){})}}}catch(e){}
+}function buildData(body){
   var c=card();body.appendChild(c);
   var r=el('div','display:flex;align-items:center;justify-content:space-between');
   r.appendChild(txt(t('de')+'<div style="font-size:10px;color:#94a3b8;margin-top:2px">'+t('ded')+'</div>','font-size:12px;font-weight:600;color:#334155'));
@@ -323,3 +340,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 })();
+;try{var __pgb=document.createElement('div');__pgb.style.cssText='position:fixed;bottom:20px;right:20px;z-index:2147483640;width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;box-shadow:0 4px 16px rgba(59,130,246,.35);transition:transform .15s;user-select:none';__pgb.textContent='⚙';__pgb.title='Pake Plus Settings';__pgb.onclick=function(){if(window.__pakeOpenSettings)window.__pakeOpenSettings()};document.documentElement.appendChild(__pgb)}catch(e){}

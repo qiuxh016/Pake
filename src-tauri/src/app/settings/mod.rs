@@ -18,10 +18,9 @@ pub use health::run_health_check;
 pub use io::load_settings;
 pub use types::AppSettings;
 
-// Window helper
 pub fn open_settings_panel(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("pake") {
-        let _ = window.eval("window.__pakeOpenSettings()");
+        let _ = window.eval("if(window.__pakeOpenSettings)window.__pakeOpenSettings()");
     }
 }
 

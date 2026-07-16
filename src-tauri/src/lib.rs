@@ -165,6 +165,8 @@ pub fn run_app() {
     let clipboard_enabled = pake_config.clipboard;
     #[cfg(feature = "clipboard")]
     let clipboard_max = pake_config.clipboard_max;
+    #[cfg(feature = "clipboard")]
+    eprintln!("[Pake] clipboard_enabled={} clipboard_max={}", clipboard_enabled, clipboard_max);
     let _enable_find = pake_config.windows[0].enable_find;
     #[cfg(feature = "clipboard")]
     let package_name = tauri_config
@@ -265,6 +267,19 @@ pub fn run_app() {
             ]);
     }
 
+    // Settings panel protocol — always available regardless of clipboard feature
+    app_builder = app_builder.register_uri_scheme_protocol(
+        "pake-settings",
+        |_context, _request| {
+            tauri::http::Response::builder()
+                .status(200)
+                .header("Content-Type", "text/html; charset=utf-8")
+                .header("Cache-Control", "no-store")
+                .body(include_bytes!("../assets/settings.html").to_vec())
+                .expect("valid settings protocol response")
+        },
+    );
+
     #[cfg(not(feature = "clipboard"))]
     {
         app_builder = app_builder.invoke_handler(tauri::generate_handler![
@@ -352,22 +367,14 @@ pub fn run_app() {
             }
 
             // Register settings panel shortcut (Ctrl+Shift+,)
+            // NOTE: global_shortcut plugin is already registered by set_global_shortcut above.
+            // We reuse the existing plugin manager instead of calling app.plugin() a second time
+            // (which would fail because Tauri only allows one plugin instance per type).
             {
-                let settings_shortcut =
-                    Shortcut::from_str("Ctrl+Shift+,").expect("Invalid settings shortcut");
-                let app_h = app.app_handle().clone();
-                if let Err(e) = app.app_handle().plugin(
-                    tauri_plugin_global_shortcut::Builder::new()
-                        .with_handler(move |app, event, _s| {
-                            if settings_shortcut.eq(event) {
-                                app::settings::open_settings_panel(app);
-                            }
-                        })
-                        .build(),
-                ) {
-                    eprintln!("[Pake] Failed to register settings shortcut: {e}");
-                } else {
-                    let _ = app_h.global_shortcut().register(settings_shortcut);
+                let shortcut = Shortcut::from_str("Ctrl+Shift+Comma")
+                    .unwrap_or_else(|_| Shortcut::from_str("Ctrl+Alt+S").expect("fallback"));
+                if let Err(error) = app.app_handle().global_shortcut().register(shortcut) {
+                    eprintln!("[Pake] Failed to register settings shortcut: {error}");
                 }
             }
 

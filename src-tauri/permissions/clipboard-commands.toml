@@ -1,0 +1,15 @@
+[[permission]]
+identifier = "allow-clipboard-commands"
+description = "Allows the main webview to call clipboard commands from the settings panel."
+commands.allow = [
+  "clipboard_list",
+  "clipboard_search",
+  "clipboard_copy_item",
+  "clipboard_delete_item",
+  "clipboard_clear_all",
+  "clipboard_stats",
+  "clipboard_show_panel",
+  "clipboard_hide_panel",
+  "clipboard_get_settings",
+  "clipboard_update_settings",
+]

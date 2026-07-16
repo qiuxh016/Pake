@@ -2,233 +2,140 @@
 <p align="center">
     <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/>
 </p>
-<h1 align="center">Pake</h1>
-<p align="center"><strong>Turn any webpage into a desktop app with one command, supports macOS, Windows, and Linux</strong></p>
-<div align="center">
-    <a href="https://twitter.com/HiTw93" target="_blank">
-    <img alt="twitter" src="https://img.shields.io/badge/follow-Tw93-red?style=flat-square&logo=Twitter"></a>
-    <a href="https://t.me/+9f9gf4ZrFSQ2OWVl" target="_blank">
-    <img alt="telegram" src="https://img.shields.io/badge/chat-telegram-blueviolet?style=flat-square&logo=Telegram"></a>
-    <a href="https://github.com/tw93/Pake/releases" target="_blank">
-    <img alt="GitHub downloads" src="https://img.shields.io/github/downloads/tw93/Pake/total.svg?style=flat-square"></a>
-    <a href="https://github.com/tw93/Pake/commits" target="_blank">
-    <img alt="GitHub commit" src="https://img.shields.io/github/commit-activity/m/tw93/Pake?style=flat-square"></a>
-    <a href="https://github.com/tw93/Pake/issues?q=is%3Aissue+is%3Aclosed" target="_blank">
-    <img alt="GitHub closed issues" src="https://img.shields.io/github/issues-closed/tw93/Pake.svg?style=flat-square"></a>
-</div>
+<h1 align="center">Pake Plus</h1>
+<p align="center"><strong>Enhanced desktop app builder based on Pake —— Adblock · Cache · Clipboard · Settings</strong></p>
 
 ## Features
 
-- 🎐 **Lightweight**: Installer is nearly 20 times smaller than Electron packages, typically under 10M on disk
-- 🚀 **Fast**: Built with Rust Tauri, much faster than traditional JS frameworks with lower memory usage
-- ⚡ **Easy to use**: One-command packaging via CLI or online building, no complex configuration needed
-- 📦 **Feature-rich**: Supports shortcuts, immersive windows, drag & drop, style customization, ad removal
+### 🛡 Adblock
 
-## Getting Started
+Dual-layer ad filtering powered by EasyList rules, operating at both the network request level and DOM element level:
 
-- **Beginners**: Download ready-made [Popular Packages](#popular-packages) or use [Online Building](docs/github-actions-usage.md) with no environment setup required
-- **Developers**: Install [CLI Tool](docs/cli-usage.md) for one-command packaging of any website with customizable icons, window settings, and more
-- **Advanced Users**: Clone the project locally for [Custom Development](#development), or check [Advanced Usage](docs/advanced-usage.md) for style customization and feature enhancement
-- **Troubleshooting**: Check [FAQ](docs/faq.md) for common issues and solutions
+- **Network Interception**: Registers Tauri resource request interceptors to match every HTTP/HTTPS request against rule sets, blocking blacklisted resources at the source
+- **DOM Hiding**: Extracts CSS selectors from rules and injects them as hide styles, with MutationObserver monitoring for dynamically inserted elements
+- **Custom Rules**: User-defined filtering rules, one per line, using `||domain^` (block) or `##.selector` (hide) format
+- **Statistics**: Real-time block count displayed on the tray icon
 
-## Popular Packages
+### 💾 Offline Cache
 
-<table>
-    <tr>
-        <td>WeRead
-            <a href="https://github.com/tw93/Pake/releases/latest/download/WeRead.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/WeRead_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/WeRead_x86_64.deb">Linux</a>
-        </td>
-        <td>Twitter
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Twitter.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Twitter_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Twitter_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/WeRead.jpg width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Twitter.jpg width=600/></td>
-    </tr>
-    <tr>
-        <td>Grok
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Grok.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Grok_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Grok_x86_64.deb">Linux</a>
-        </td>
-        <td>DeepSeek
-            <a href="https://github.com/tw93/Pake/releases/latest/download/DeepSeek.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/DeepSeek_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/DeepSeek_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Grok.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/DeepSeek.png width=600/></td>
-    </tr>
-    <tr>
-        <td>ChatGPT
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ChatGPT.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ChatGPT_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ChatGPT_x86_64.deb">Linux</a>
-        </td>
-        <td>Gemini
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Gemini.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Gemini_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Gemini_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/ChatGPT.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Gemini.png width=600/></td>
-    </tr>
-    <tr>
-      <td>YouTube Music
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTubeMusic.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTubeMusic_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTubeMusic_x86_64.deb">Linux</a>
-      </td>
-      <td>YouTube
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTube.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTube_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/YouTube_x86_64.deb">Linux</a>
-      </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/YouTubeMusic.png width=600 /></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/YouTube.jpg width=600 /></td>
-    </tr>
-    <tr>
-        <td>LiZhi
-            <a href="https://github.com/tw93/Pake/releases/latest/download/LiZhi.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/LiZhi_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/LiZhi_x86_64.deb">Linux</a>
-        </td>
-        <td>ProgramMusic
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ProgramMusic.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ProgramMusic_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/ProgramMusic_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/LiZhi.jpg width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/ProgramMusic.jpg width=600/></td>
-    </tr>
-    <tr>
-        <td>Excalidraw
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Excalidraw.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Excalidraw_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Excalidraw_x86_64.deb">Linux</a>
-        </td>
-        <td>XiaoHongShu
-            <a href="https://github.com/tw93/Pake/releases/latest/download/XiaoHongShu.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/XiaoHongShu_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/XiaoHongShu_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Excalidraw.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/XiaoHongShu.png width=600/></td>
-    </tr>
-    <tr>
-        <td>Notion
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Notion.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Notion_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Notion_x86_64.deb">Linux</a>
-        </td>
-        <td>Flomo
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Flomo.dmg">Mac</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Flomo_x64.msi">Windows</a>
-            <a href="https://github.com/tw93/Pake/releases/latest/download/Flomo_x86_64.deb">Linux</a>
-        </td>
-    </tr>
-    <tr>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Notion.png width=600/></td>
-        <td><img src=https://raw.githubusercontent.com/tw93/static/main/pake/Flomo.png width=600/></td>
-    </tr>
-</table>
+HTTP-layer transparent proxy that caches page resources locally, enabling offline browsing of previously visited pages:
 
-<details>
-<summary>🏂 You can download more applications from <a href="https://github.com/tw93/Pake/releases">Releases</a>. <b>Click here to expand the shortcuts reference!</b></summary>
+- **Transparent Proxy**: Intercepts all GET requests; cached and valid responses are served directly without network access
+- **LRU Eviction**: Automatically purges least-recently-used files when cache exceeds the limit (default 200MB, adjustable 50-1000MB)
+- **Cache Index**: Maintains URL-hash-to-file-path mapping for fast lookup and hit-rate statistics
+- **Offline Mode**: Automatically displays a list of accessible cached pages when disconnected
 
-<br/>
+### 📋 Clipboard Management
 
-| Mac                                                       | Windows/Linux                                       | Function                            |
-| --------------------------------------------------------- | --------------------------------------------------- | ----------------------------------- |
-| <kbd>⌘</kbd> + <kbd>[</kbd>                               | <kbd>Ctrl</kbd> + <kbd>←</kbd>                      | Return to the previous page         |
-| <kbd>⌘</kbd> + <kbd>]</kbd>                               | <kbd>Ctrl</kbd> + <kbd>→</kbd>                      | Go to the next page                 |
-| <kbd>⌘</kbd> + <kbd>↑</kbd>                               | <kbd>Ctrl</kbd> + <kbd>↑</kbd>                      | Auto scroll to top of page          |
-| <kbd>⌘</kbd> + <kbd>↓</kbd>                               | <kbd>Ctrl</kbd> + <kbd>↓</kbd>                      | Auto scroll to bottom of page       |
-| <kbd>⌘</kbd> + <kbd>r</kbd>                               | <kbd>Ctrl</kbd> + <kbd>r</kbd>                      | Refresh Page                        |
-| <kbd>⌘</kbd> + <kbd>w</kbd>                               | <kbd>Ctrl</kbd> + <kbd>w</kbd>                      | Hide window, not quit               |
-| <kbd>⌘</kbd> + <kbd>-</kbd>                               | <kbd>Ctrl</kbd> + <kbd>-</kbd>                      | Zoom out the page                   |
-| <kbd>⌘</kbd> + <kbd>=</kbd>                               | <kbd>Ctrl</kbd> + <kbd>=</kbd>                      | Zoom in the Page                    |
-| <kbd>⌘</kbd> + <kbd>0</kbd>                               | <kbd>Ctrl</kbd> + <kbd>0</kbd>                      | Reset the page zoom                 |
-| <kbd>⌘</kbd> + <kbd>L</kbd>                               | <kbd>Ctrl</kbd> + <kbd>L</kbd>                      | Copy Current Page URL               |
-| <kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>⌥</kbd> + <kbd>V</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd>   | Paste and Match Style               |
-| <kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>H</kbd>                | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>   | Go to Home Page                     |
-| <kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>I</kbd>                | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd>   | Toggle Developer Tools (Debug Only) |
-| <kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>⌫</kbd>                | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Del</kbd> | Clear Cache & Restart               |
-| <kbd>⌃</kbd> + <kbd>⌘</kbd> + <kbd>F</kbd>                | <kbd>F11</kbd>                                      | Toggle native window fullscreen     |
+System-level clipboard monitoring with automatic recording, full-text search, and one-click reuse:
 
-In addition, double-click the title bar to switch to full-screen mode. On Windows and Linux, use `--hide-window-decorations` for a frameless window with a top drag region. For Mac users, you can also use the gesture to go to the previous or next page and drag the title bar to move the window. The new menu also offers options for navigation, zoom, and window controls.
+- **System Monitor**: Calls native OS APIs via Rust FFI (Windows `AddClipboardFormatListener`, macOS `NSPasteboard`, Linux X11 selection), running on a dedicated thread without blocking the UI
+- **SHA-256 Deduplication**: Computes content hashes on each change, with dual-guard logic to filter duplicate notifications and write-back interference
+- **History Panel**: Press `Ctrl+Shift+V` to open a 320×480 floating panel showing records in reverse chronological order, each with a content preview, timestamp, and source application name
+- **Full-Text Search**: Fuzzy matching in both Chinese and English, multi-keyword AND logic via space separation, real-time results within ~120ms
+- **One-Click Reuse**: Click any record to write its content back to the system clipboard, with a 3-second toast notification; long text (>100 chars) supports expand/collapse
+- **Privacy Filtering**: Automatically skips very short text (<2 chars), very long text (>10,000 chars), password-like strings (6-30 chars mixing letters and digits), and credit card numbers (13-19 digits with Luhn validation); supports per-application ignore lists
+- **Auto-Cleanup**: Default cap of 2,000 records with 30-day retention; excess records are purged in 500-record batches, with hourly background cleanup
+- **Persistence**: SQLite WAL mode storage with unique hash index and UPSERT semantics (re-copying the same text refreshes its timestamp without creating duplicates)
 
-</details>
+### ⚙ Settings Panel
 
-## Command-Line Packaging
+A unified control center managing all module configurations:
 
-![Pake](https://raw.githubusercontent.com/tw93/static/main/pake/pake1.gif)
+- **Visual Configuration**: Right-side sliding drawer with six tabs (General / Adblock / Cache / Clipboard / Data / About); changes apply immediately and persist to local JSON
+- **Theme & Language**: Light, dark, and system-follow themes; Chinese/English interface switching; Rust enum types ensure compile-time safety for Theme and Language values
+- **Data Export**: One-click directory scan and packaging into `.pake-data.zip` with a `manifest.json` file listing, enabling cross-device migration
+- **Data Import**: Reads ZIP archives, previews contents before confirming import; existing files are backed up (`.bak`) before being overwritten, with rollback support
+- **System Diagnostics**: Collects app version, git commit, build time, rustc version, target platform, OS info, CPU cores, memory usage, and disk space; one-click copy of the full diagnostics report to clipboard
+- **Version Backup**: Automatically rotates up to 5 historical versions before each save; startup health checks can restore from backups if the config file is corrupted
+
+## Tech Stack
+
+- **Backend**: Rust (Tauri v2 IPC framework), 67 unit tests all passing
+- **Frontend**: TypeScript (CLI) + vanilla JavaScript (WebView injection), 297 tests all passing
+- **Shell**: System WebView (Windows: WebView2, macOS: WKWebView, Linux: WebKitGTK)
+- **Storage**: JSON config files + SQLite WAL (clipboard history)
+- **Key Crates**: clipboard-rs, rusqlite, sha2, regex, zip, sysinfo, arboard, chrono, built
+
+## Quick Start
 
 ```bash
-# Install Pake CLI
-pnpm install -g pake-cli
+# Install pnpm
+npm install -g pnpm
 
-# Basic usage - automatically fetches website icon
-pake https://github.com --name GitHub
-
-# Advanced usage with custom options
-pake https://weekly.tw93.fun --name Weekly --icon https://cdn.tw93.fun/pake/weekly.icns --width 1200 --height 800 --hide-title-bar
-```
-
-First-time packaging requires environment setup and may be slower, subsequent builds are fast. For complete parameter documentation, see [CLI Usage Guide](docs/cli-usage.md). Don't want to use CLI? Try [GitHub Actions Online Building](docs/github-actions-usage.md).
-
-## Development
-
-Requires Rust `>=1.85` and Node `>=22` (recommended LTS; `>=18` also works). For detailed installation guide, see [Tauri documentation](https://v2.tauri.app/start/prerequisites/). If unfamiliar with development environment, use the CLI tool instead.
-
-```bash
 # Install dependencies
-pnpm i
+pnpm install
 
-# Local development [right-click to open debug mode]
-pnpm run dev
+# Build CLI
+pnpm run cli:build
 
-# Build application
-pnpm run build
+# Package an app (with clipboard management)
+node dist/cli.js https://github.com --name MyApp --clipboard --clipboard-max 2000
+
+# Package with all features
+node dist/cli.js https://example.com --name MyApp \
+  --block-ads \
+  --cache --cache-size 500 \
+  --clipboard --clipboard-max 2000 \
+  --show-system-tray
 ```
 
-For style customization, feature enhancement, container communication and other advanced features, see [Advanced Usage Documentation](docs/advanced-usage.md).
+## CLI Options
 
-## Developers
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--name <string>` | App name | - |
+| `--icon <path>` | App icon | - |
+| `--width <number>` | Window width | 1200 |
+| `--height <number>` | Window height | 780 |
+| `--show-system-tray` | Show system tray | false |
+| `--clipboard` | Enable clipboard management | false |
+| `--clipboard-max <number>` | Max clipboard records (500-5000) | 2000 |
+| `--debug` | Debug build | false |
 
-Pake's development can not be without these Hackers. They contributed a lot of capabilities for Pake. Also, welcome to follow them! ❤️
+## Project Structure
 
-<a href="https://github.com/tw93/Pake/graphs/contributors">
-  <img src="./CONTRIBUTORS.svg?v=2" alt="Contributors" width="1000" />
-</a>
+```
+src-tauri/src/
+├── app/
+│   ├── clipboard/          # Clipboard management
+│   │   ├── monitor.rs      # System clipboard monitor (FFI)
+│   │   ├── store.rs        # SQLite storage & retrieval
+│   │   ├── filter.rs       # Privacy filtering
+│   │   ├── panel.rs        # History panel window
+│   │   ├── commands.rs     # IPC commands
+│   │   ├── settings.rs     # Clipboard-specific settings
+│   │   ├── cleanup.rs      # Auto-cleanup
+│   │   └── source.rs       # Source app identification
+│   ├── settings/           # Settings & data management
+│   │   ├── types.rs        # Data structures & enums
+│   │   ├── traits.rs       # ModuleSettings trait
+│   │   ├── io.rs           # JSON R/W & version backup
+│   │   ├── health.rs       # Startup health check
+│   │   ├── diagnostics.rs  # Diagnostics collection
+│   │   └── commands.rs     # IPC commands
+│   ├── setup.rs            # Tray menu & global shortcuts
+│   └── window.rs           # Window creation & JS injection
+├── inject/
+│   ├── custom.js           # Settings panel sidebar
+│   ├── settings.js         # Clipboard test panel
+│   └── event.js            # Keyboard shortcuts
+└── lib.rs                  # App entry & command registration
+```
 
-## Support
+## Test Results
 
-- The most direct way to support me is getting [Mole for Mac](https://mole.fit), my paid Mac cleanup app.
-- If Pake helped you, give it a star, [share it](https://twitter.com/intent/tweet?url=https://github.com/tw93/Pake&text=Pake%20-%20Turn%20any%20webpage%20into%20a%20desktop%20app%20with%20one%20command.%20Nearly%2020x%20smaller%20than%20Electron%20packages,%20supports%20macOS%20Windows%20Linux), or open an issue or PR.
-- I have two cats, TangYuan and Coke. If you think Pake delights your life, you can feed them <a href="https://cats.tw93.fun?name=Pake" target="_blank">canned food 🥩</a>.
+| Type | Count | Passed | Result |
+|------|-------|--------|--------|
+| Rust tests | 67 | 67 | All passed |
+| JavaScript tests | 297 | 297 | All passed |
+| cargo check | - | - | 0 warnings |
 
-<details>
-<summary>These lovely people already did 🐱</summary>
-<br/>
-<a href="https://cats.tw93.fun?name=Pake"><img src="https://cdn.jsdelivr.net/gh/tw93/sponsors@main/assets/sponsors.svg" width="1000" loading="lazy" /></a>
-</details>
+## Credits
+
+This project is based on [Pake](https://github.com/tw93/Pake) (MIT License). See `latex/main.pdf` for the full experiment report.
 
 ## License
 
-Pake is open source under GPL-3.0, see [LICENSE](./LICENSE) and [Pake Output Exception](./LICENSE-EXCEPTION); apps you build with Pake are entirely yours to use and distribute. If you fork Pake into your own product, to avoid confusion please give it a different name and credit Pake as the source.
+- Pake Plus additions: MIT License
+- Original Pake code: MIT License, Copyright (c) 2023 Tw93
