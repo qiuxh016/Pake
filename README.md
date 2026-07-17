@@ -1,6 +1,6 @@
 <h4 align="right"><strong>English</strong> | <a href="README_CN.md">简体中文</a></h4>
 <p align="center">
-    <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/>
+    <!-- <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/> -->
 </p>
 <h1 align="center">Pake Plus</h1>
 <p align="center"><strong>Desktop browser app based on Pake —— Adblock · Cache · Clipboard · Settings</strong></p>
