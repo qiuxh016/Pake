@@ -1273,11 +1273,14 @@ JavaScript 负责用户界面，Tauri IPC 作为两者之间的桥梁。
 \subsection{不足与改进方向}
 
 \begin{enumerate}[label=(\arabic*)]
-  \item \textbf{错误处理}：当前大量使用 \texttt{Result<(), String>}，可通过 \texttt{thiserror} 库定义结构化错误类型
-  \item \textbf{异步 I/O}：IPC 命令中文件操作使用同步 I/O，可能阻塞事件循环，可迁移至 \texttt{tokio::fs}
-  \item \textbf{托盘菜单动态更新}：当前无法在运行时更新菜单项文字，需重建托盘
-  \item \textbf{打包时预设配置}：CLI 尚不支持将设置写入打包产物，需增加 \texttt{---settings} 选项
-  \item \textbf{测试覆盖}：JS 端缺少设置面板相关的自动化测试
+  \item \textbf{跨域导航过渡体验}——欢迎页 URL 跳转使用 \texttt{location.href}，跨域时旧页面短暂可见。曾尝试 iframe 方案但主流网站设 \texttt{X-Frame-Options} 拒绝嵌入。改进方向：利用 Tauri 原生 WebView API 实现平滑导航。
+
+  \item \textbf{设置面板与页面 CSS 冲突风险}——设置面板以 \texttt{position:fixed} 注入主页面 DOM，可能与目标网站全局 CSS 冲突。改进方向：渲染为独立 WebView 窗口，与主页面沙箱化隔离。
+
+  \item \textbf{离线缓存对动态内容支持有限}——当前仅缓存静态资源，API 响应和 WebSocket 数据未被缓存。改进方向：增加 Service Worker 级别 API 响应缓存。
+
+  \item \textbf{缺少端到端集成测试}——Rust 端 67 个、JS 端 297 个单元测试全部通过，但无 E2E 自动化测试覆盖设置面板全流程。改进方向：引入 Tauri 测试框架。
+
 \end{enumerate}
 
 \end{document}
