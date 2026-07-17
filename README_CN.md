@@ -1,6 +1,6 @@
 <h4 align="right"><a href="README.md">English</a> | <strong>简体中文</strong></h4>
 <p align="center">
-    <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/>
+    <!-- <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/> -->
 </p>
 <h1 align="center">Pake Plus</h1>
 <p align="center"><strong>基于 Pake 的网页桌面应用增强工具 —— 广告拦截 · 剪贴板管理 · 可视化设置</strong></p>
