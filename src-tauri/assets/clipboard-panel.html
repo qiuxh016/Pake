@@ -50,6 +50,62 @@
         border-color: #3478f6;
         box-shadow: 0 0 0 2px rgba(52, 120, 246, 0.14);
       }
+      .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        padding: 8px 10px;
+        background: linear-gradient(180deg, #fbfdff, #f4f8fd);
+        border-bottom: 1px solid #e5e9f0;
+      }
+      .quick-stat {
+        position: relative;
+        min-width: 0;
+        padding: 7px 8px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 9px;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+        transition:
+          transform 160ms ease,
+          box-shadow 160ms ease,
+          border-color 160ms ease;
+      }
+      .quick-stat::after {
+        position: absolute;
+        inset: 0;
+        width: 42%;
+        content: "";
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(52, 120, 246, 0.13),
+          transparent
+        );
+        transform: translateX(-120%);
+        animation: stat-sheen 3.4s ease-in-out infinite;
+      }
+      .quick-stat:hover {
+        border-color: rgba(52, 120, 246, 0.28);
+        box-shadow: 0 12px 28px rgba(52, 120, 246, 0.12);
+        transform: translateY(-1px);
+      }
+      .quick-stat-label {
+        margin-bottom: 3px;
+        color: #738096;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .quick-stat-value {
+        overflow: hidden;
+        color: #3478f6;
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .list {
         flex: 1;
         overflow: auto;
@@ -59,14 +115,31 @@
         position: relative;
         margin-bottom: 6px;
         padding: 10px;
+        overflow: hidden;
         cursor: pointer;
         border: 1px solid transparent;
         border-radius: 9px;
+      }
+      .item::before {
+        position: absolute;
+        top: 9px;
+        bottom: 9px;
+        left: 0;
+        width: 3px;
+        content: "";
+        background: linear-gradient(180deg, #60a5fa, #34d399);
+        border-radius: 0 999px 999px 0;
+        opacity: 0;
+        transition: opacity 140ms ease;
       }
       .item:hover,
       .item:focus-within {
         background: #f2f5f9;
         border-color: #dfe4ec;
+      }
+      .item:hover::before,
+      .item:focus-within::before {
+        opacity: 1;
       }
       .preview {
         display: -webkit-box;
@@ -300,6 +373,16 @@
       .copy-toast[hidden] {
         display: none;
       }
+      @keyframes stat-sheen {
+        0%,
+        42% {
+          transform: translateX(-120%);
+        }
+        70%,
+        100% {
+          transform: translateX(260%);
+        }
+      }
       @media (prefers-color-scheme: dark) {
         body {
           color: #edf1f7;
@@ -310,6 +393,17 @@
         .footer {
           background: #1d2129;
           border-color: #343a46;
+        }
+        .quick-stats {
+          background: linear-gradient(180deg, #1d2129, #191d24);
+          border-color: #343a46;
+        }
+        .quick-stat {
+          background: rgba(37, 42, 52, 0.82);
+          border-color: #343a46;
+        }
+        .quick-stat-value {
+          color: #8ab4ff;
         }
         .search {
           background: #252a34;
@@ -355,6 +449,24 @@
       </button>
       <button id="close-panel" class="close-panel" type="button">×</button>
     </header>
+    <section id="quick-stats" class="quick-stats" aria-label="Clipboard stats">
+      <div class="quick-stat">
+        <div id="quick-total-label" class="quick-stat-label"></div>
+        <div id="quick-total" class="quick-stat-value">0</div>
+      </div>
+      <div class="quick-stat">
+        <div id="quick-match-label" class="quick-stat-label"></div>
+        <div id="quick-match" class="quick-stat-value">0</div>
+      </div>
+      <div class="quick-stat">
+        <div id="quick-max-label" class="quick-stat-label"></div>
+        <div id="quick-max" class="quick-stat-value">0</div>
+      </div>
+      <div class="quick-stat">
+        <div id="quick-filter-label" class="quick-stat-label"></div>
+        <div id="quick-filter" class="quick-stat-value">-</div>
+      </div>
+    </section>
     <main id="list" class="list"></main>
     <section id="settings-overlay" class="settings-overlay" hidden>
       <div class="settings-card" role="dialog" aria-modal="true">
@@ -448,6 +560,12 @@
               "每行填写一个应用名；历史记录会显示检测到的来源名称。",
             cancel: "取消",
             save: "保存",
+            quickTotal: "总记录",
+            quickMatch: "当前结果",
+            quickMax: "最大容量",
+            quickFilter: "过滤状态",
+            filterOn: "过滤开启",
+            filterOff: "未过滤",
           }
         : {
             search: "Search clipboard history…",
@@ -481,12 +599,22 @@
               "Enter one application name per line. Detected source names appear in history.",
             cancel: "Cancel",
             save: "Save",
+            quickTotal: "Total",
+            quickMatch: "Results",
+            quickMax: "Capacity",
+            quickFilter: "Filters",
+            filterOn: "On",
+            filterOff: "Off",
           };
       document.documentElement.lang = isChinese ? "zh-CN" : "en";
       const listElement = document.getElementById("list");
       const searchElement = document.getElementById("search");
       const statsElement = document.getElementById("stats");
       const clearElement = document.getElementById("clear");
+      const quickTotalElement = document.getElementById("quick-total");
+      const quickMatchElement = document.getElementById("quick-match");
+      const quickMaxElement = document.getElementById("quick-max");
+      const quickFilterElement = document.getElementById("quick-filter");
       const closeElement = document.getElementById("close-panel");
       const settingsButton = document.getElementById("settings-button");
       const settingsOverlay = document.getElementById("settings-overlay");
@@ -501,6 +629,13 @@
       const confirmClearElement = document.getElementById("confirm-clear");
       const copyToastElement = document.getElementById("copy-toast");
       searchElement.placeholder = text.search;
+      document.getElementById("quick-total-label").textContent =
+        text.quickTotal;
+      document.getElementById("quick-match-label").textContent =
+        text.quickMatch;
+      document.getElementById("quick-max-label").textContent = text.quickMax;
+      document.getElementById("quick-filter-label").textContent =
+        text.quickFilter;
       clearElement.textContent = text.clear;
       closeElement.title = text.close;
       closeElement.setAttribute("aria-label", text.close);
@@ -644,6 +779,29 @@
         }
       }
 
+      function updateQuickStats(stats, matchCount, hasQuery) {
+        quickTotalElement.textContent = stats.total;
+        quickMatchElement.textContent = hasQuery ? matchCount : stats.total;
+        quickMaxElement.textContent = stats.max_items;
+        const filtersOn =
+          !currentSettings ||
+          currentSettings.ignore_short_text ||
+          currentSettings.ignore_password_like ||
+          currentSettings.ignore_credit_card_like ||
+          (currentSettings.ignored_apps || []).length > 0;
+        quickFilterElement.textContent = filtersOn
+          ? text.filterOn
+          : text.filterOff;
+      }
+
+      async function loadSettingsPreview() {
+        try {
+          currentSettings = await call("clipboard_get_settings");
+        } catch (error) {
+          currentSettings = undefined;
+        }
+      }
+
       async function refresh() {
         try {
           const query = searchElement.value.trim();
@@ -655,6 +813,7 @@
           statsElement.textContent = isChinese
             ? `${stats.total} ${text.item} / ${stats.max_items}`
             : `${stats.total} ${text.item} / ${stats.max_items}`;
+          updateQuickStats(stats, items.length, !!query);
           clearElement.disabled = stats.total === 0;
         } catch (error) {
           listElement.innerHTML = `<div class="error">${text.failed}</div>`;
@@ -735,7 +894,7 @@
       }
 
       window.pakeClipboardPanel = { refresh, openWithQuery };
-      refresh();
+      loadSettingsPreview().finally(refresh);
       searchElement.focus();
     </script>
   </body>

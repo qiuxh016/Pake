@@ -383,6 +383,7 @@ pub fn run_app() {
                 .map_err(|error| tauri::Error::Io(std::io::Error::other(error)))?;
                 let clipboard_listening = clipboard_state.is_enabled();
                 app.manage(clipboard_state);
+                let _ = app::clipboard::panel::ensure_panel_window(app.handle());
                 clipboard_listening
             } else {
                 false
