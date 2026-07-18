@@ -893,7 +893,7 @@ Rust 模块的状态（\texttt{AdblockState}、\texttt{CacheState}、\texttt{Cli
 \textbf{1. 欢迎页与导航入口。}
 应用启动时，\texttt{initUI()} 检测 body 就绪后调用 \texttt{showWelcome()} 渲染全屏欢迎页——背景层（\texttt{z-index:2147483646}，深色渐变）覆盖旧页面内容，居中卡片（\texttt{z-index:2147483647}）包含 Pake Plus 标识、三张模块状态卡片（调用 \texttt{get\_module\_stats} IPC 实时获取 Adblock/Cache/Clipboard 的启用状态和摘要）、URL 输入框（预填当前地址、支持回车跳转、自动补全 \texttt{https://} 和 \texttt{.com}、大小写规范化）和 Start 按钮。点击 Start 后欢迎页保持显示遮罩过渡动画，通过 \texttt{window.name = "pw"} 跨域持久化标记确保新页面不重复弹出。
 
-页面三个浮动按钮由 \texttt{initUI()} 在 body 就绪后统一创建：左下角 🏠 Home 按钮（清除标记重新打开欢迎页）、右上角 ↻ 刷新按钮、右下角 ⚙ 设置按钮。用户点击 ⚙、右键托盘选择 Settings、或按 Ctrl+Shift+, 均可打开设置面板。面板为 \texttt{position:fixed;top:0;right:0;width:400px} 的固定定位抽屉，通过 \texttt{transform:translateX(100\%)} 隐藏，CSS transition 滑入，6 个标签页按需渲染。
+页面三个浮动按钮由 \texttt{initUI()} 在 body 就绪后统一创建：左下角 🏠 Home 按钮（清除标记重新打开欢迎页）、右上角 ↻ 刷新按钮、右下角 ⚙ 设置按钮。按钮支持鼠标拖拽移动位置，始终保持在最顶层（\texttt{z-index: 2147483647}）。用户点击 ⚙、右键托盘选择 Settings、或按 Ctrl+Shift+, 均可打开设置面板。面板为 \texttt{position:fixed;top:0;right:0;width:400px} 的固定定位抽屉，通过 \texttt{transform:translateX(100\%)} 隐藏，CSS transition 滑入，6 个标签页按需渲染。
 
 \textbf{桌面快捷方式部署。}编译产物 \texttt{target/debug/pake.exe} 可直接双击运行，也可创建 Windows 快捷方式（\texttt{.lnk}）指向该 exe 并放置于桌面，实现类似原生应用的一键启动体验。快捷方式通过 PowerShell \texttt{WScript.Shell.CreateShortcut} API 创建，TargetPath 指向 exe 绝对路径，WorkingDirectory 设为项目 \texttt{src-tauri} 目录。同时生成 \texttt{start.bat} 批处理文件（UTF-8 BOM 编码处理中文路径）作为备用启动方式。
 
@@ -1245,7 +1245,7 @@ pake https://example.com --name MyApp \
 广告拦截   & EasyList 规则引擎（32 域名 + 2 正则 + 9 CSS）、fetch/XHR 拦截、DOM 元素隐藏、自定义规则编辑、拦截统计 & 请求代理、MutationObserver、Rust 规则解析器 & $\sim$450 行 \\
 离线缓存   & HTTP 透明代理缓存、LRU 淘汰算法、磁盘索引持久化、离线模式自动切换、缓存命中 toast 提示、离线横幅 & tokio 异步 I/O、tauri-plugin-http::reqwest & $\sim$520 行 \\
 剪贴板管理 & 系统级监听（OS FFI）、SQLite 历史存储、全文搜索面板、一键复用、隐私过滤、自动清理 & clipboard-rs、rusqlite、wl-clipboard-rs & $\sim$900 行 \\
-设置面板   & 可视化配置（6 标签页）、数据导出/导入（ZIP）、系统诊断（sysinfo）、版本备份与恢复（5 版轮转）、健康检查、欢迎页 URL 导航系统（自动补全 + 跨域无闪跳转）、桌面快捷部署、多模块框架集成与功能完善 & ModuleSettings trait、zip crate、sysinfo、rfd、window.name 跨域标记 & $\sim$900 行 \\
+设置面板   & 可视化配置（6 标签页）、数据导出/导入（ZIP）、系统诊断（sysinfo）、版本备份与恢复（5 版轮转）、健康检查、欢迎页 URL 导航系统（自动补全 + 跨域无闪跳转 + 气泡动画背景）、浮动按钮可拖拽、剪贴板面板右下定位、桌面快捷部署、多模块框架集成与功能完善 & ModuleSettings trait、zip crate、sysinfo、rfd、window.name 跨域标记、MutationObserver & $\sim$900 行 \\
 \bottomrule
 \end{tabularx}
 \caption{与 Pake 原项目的差异}
