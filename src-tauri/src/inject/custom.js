@@ -1428,6 +1428,95 @@ document.title += " [D面板已注入]";
     document.body.appendChild(box);
     input.focus();
   }
+  function showDragHint() {
+    try {
+      if (localStorage.getItem("__ps_drag_hint_seen__") === "1") return;
+      localStorage.setItem("__ps_drag_hint_seen__", "1");
+    } catch (e) {}
+    var hint = el(
+      "div",
+      "position:fixed;right:72px;bottom:28px;z-index:2147483647;background:#0f172a;color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:0 8px 30px rgba(15,23,42,.35);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Microsoft YaHei,sans-serif;transition:opacity .3s,transform .3s;pointer-events:none",
+    );
+    hint.innerHTML =
+      '<div style="font-weight:700;margin-bottom:2px">提示</div><div>搜索、刷新、设置按钮可以拖动</div><div style="height:18px;margin-top:6px;position:relative"><span style="position:absolute;left:0;top:4px;width:10px;height:10px;border-radius:50%;background:#60a5fa;animation:__ps_drag_dot__ 1.2s ease-in-out 2"></span><span style="position:absolute;left:0;right:0;top:8px;height:2px;background:rgba(96,165,250,.35)"></span></div>';
+    var style = document.getElementById("__ps_drag_hint_style__");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "__ps_drag_hint_style__";
+      style.textContent =
+        "@keyframes __ps_drag_dot__{0%{left:0}50%{left:120px}100%{left:0}}";
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(hint);
+    setTimeout(function () {
+      hint.style.opacity = "0";
+      hint.style.transform = "translateY(8px)";
+      setTimeout(function () {
+        if (hint.parentNode) hint.parentNode.removeChild(hint);
+      }, 350);
+    }, 3600);
+  }
+  function makeDraggable(button, key) {
+    var moved = false;
+    var startX = 0;
+    var startY = 0;
+    var startLeft = 0;
+    var startTop = 0;
+    try {
+      var saved = JSON.parse(localStorage.getItem(key) || "null");
+      if (saved && typeof saved.left === "number" && typeof saved.top === "number") {
+        button.style.left = saved.left + "px";
+        button.style.top = saved.top + "px";
+        button.style.right = "auto";
+        button.style.bottom = "auto";
+      }
+    } catch (e) {}
+    button.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0) return;
+      moved = false;
+      var rect = button.getBoundingClientRect();
+      startX = event.clientX;
+      startY = event.clientY;
+      startLeft = rect.left;
+      startTop = rect.top;
+      button.setPointerCapture(event.pointerId);
+    });
+    button.addEventListener("pointermove", function (event) {
+      if (!button.hasPointerCapture(event.pointerId)) return;
+      var dx = event.clientX - startX;
+      var dy = event.clientY - startY;
+      if (Math.abs(dx) + Math.abs(dy) < 4) return;
+      moved = true;
+      var left = Math.max(8, Math.min(window.innerWidth - button.offsetWidth - 8, startLeft + dx));
+      var top = Math.max(8, Math.min(window.innerHeight - button.offsetHeight - 8, startTop + dy));
+      button.style.left = left + "px";
+      button.style.top = top + "px";
+      button.style.right = "auto";
+      button.style.bottom = "auto";
+    });
+    button.addEventListener("pointerup", function (event) {
+      if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId);
+      if (!moved) return;
+      try {
+        localStorage.setItem(
+          key,
+          JSON.stringify({ left: button.offsetLeft, top: button.offsetTop }),
+        );
+      } catch (e) {}
+      setTimeout(function () {
+        moved = false;
+      }, 0);
+    });
+    button.addEventListener(
+      "click",
+      function (event) {
+        if (!moved) return;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true,
+    );
+  }
   function withTimeout(promise, timeoutMs) {
     return new Promise(function (resolve, reject) {
       var settled = false;
@@ -1521,6 +1610,9 @@ document.title += " [D面板已注入]";
           }
           // Keep welcome visible to cover old page during navigation
           window.name = "pw";
+          try {
+            localStorage.setItem("__ps_drag_hint_pending__", "1");
+          } catch (e) {}
           location.href = u;
           return;
         }
@@ -1531,6 +1623,7 @@ document.title += " [D面板已注入]";
         setTimeout(function () {
           if (w.parentNode) w.parentNode.removeChild(w);
           if (bg.parentNode) bg.parentNode.removeChild(bg);
+          showDragHint();
         }, 400);
       };
     }
@@ -1611,6 +1704,7 @@ document.title += " [D面板已注入]";
       location.reload();
     };
     document.body.appendChild(__prb);
+    makeDraggable(__prb, "__ps_refresh_pos__");
 
     // Page search button
     var __pcb = document.createElement("button");
@@ -1624,6 +1718,7 @@ document.title += " [D面板已注入]";
       openPageSearchBox();
     };
     document.body.appendChild(__pcb);
+    makeDraggable(__pcb, "__ps_search_pos__");
 
     // Settings button
     var __pgb = document.createElement("div");
@@ -1636,6 +1731,7 @@ document.title += " [D面板已注入]";
       if (window.__pakeOpenSettings) window.__pakeOpenSettings();
     };
     document.body.appendChild(__pgb);
+    makeDraggable(__pgb, "__ps_settings_pos__");
 
     // Home/Welcome button (bottom-left)
     var __phb = document.createElement("div");
@@ -1656,6 +1752,12 @@ document.title += " [D面板已注入]";
       showWelcome();
     };
     document.body.appendChild(__phb);
+    try {
+      if (localStorage.getItem("__ps_drag_hint_pending__") === "1") {
+        localStorage.removeItem("__ps_drag_hint_pending__");
+        setTimeout(showDragHint, 600);
+      }
+    } catch (e) {}
 
     // Toggle CSS
     var css = document.createElement("style");
