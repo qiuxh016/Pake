@@ -1386,6 +1386,53 @@ document.title += " [D面板已注入]";
       toast("Clipboard search failed: " + e);
     });
   }
+  function openPageSearchBox() {
+    var box = document.getElementById("__ps_page_search__");
+    if (box) {
+      box.style.display = box.style.display === "none" ? "flex" : "none";
+      var existingInput = document.getElementById("__ps_page_search_input__");
+      if (box.style.display !== "none" && existingInput) existingInput.focus();
+      return;
+    }
+    box = el(
+      "div",
+      "position:fixed;bottom:72px;right:68px;z-index:2147483646;width:240px;height:40px;background:#fff;border:2px solid #3b82f6;border-radius:12px;box-shadow:0 2px 12px rgba(59,130,246,.2);display:flex;align-items:center;gap:6px;padding:4px 6px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Microsoft YaHei,sans-serif",
+    );
+    box.id = "__ps_page_search__";
+    var input = el(
+      "input",
+      "flex:1;min-width:0;border:none;outline:none;color:#1e293b;font-size:13px;background:transparent",
+    );
+    input.id = "__ps_page_search_input__";
+    input.type = "search";
+    input.placeholder = "Search page";
+    var close = btn(
+      "×",
+      "width:28px;height:28px;border:none;background:#f1f5f9;color:#64748b;border-radius:8px;cursor:pointer;font-size:18px;line-height:1",
+      function () {
+        box.style.display = "none";
+      },
+    );
+    input.oninput = function () {
+      var query = input.value.trim();
+      if (!query) return;
+      window.find(query, false, false, true, false, true, false);
+    };
+    input.onkeydown = function (event) {
+      var query = input.value.trim();
+      if (event.key === "Escape") {
+        box.style.display = "none";
+        return;
+      }
+      if (event.key !== "Enter" || !query) return;
+      event.preventDefault();
+      window.find(query, false, event.shiftKey, true, false, true, false);
+    };
+    box.appendChild(input);
+    box.appendChild(close);
+    document.body.appendChild(box);
+    input.focus();
+  }
   function withTimeout(promise, timeoutMs) {
     return new Promise(function (resolve, reject) {
       var settled = false;
@@ -1570,16 +1617,16 @@ document.title += " [D面板已注入]";
     };
     document.body.appendChild(__prb);
 
-    // Clipboard search button
+    // Page search button
     var __pcb = document.createElement("button");
     __pcb.type = "button";
     __pcb.style.cssText =
       "position:fixed;bottom:72px;right:20px;z-index:2147483646;width:40px;height:40px;background:#fff;border:2px solid #3b82f6;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#3b82f6;font-size:18px;font-weight:700;box-shadow:0 2px 12px rgba(59,130,246,.2);transition:transform .15s;user-select:none";
     __pcb.textContent = "⌕";
-    __pcb.title = "Search clipboard history";
-    __pcb.setAttribute("aria-label", "Search clipboard history");
+    __pcb.title = "Search page";
+    __pcb.setAttribute("aria-label", "Search page");
     __pcb.onclick = function () {
-      openClipboardSearchPanel();
+      openPageSearchBox();
     };
     document.body.appendChild(__pcb);
 
