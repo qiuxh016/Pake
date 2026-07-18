@@ -115,6 +115,14 @@ impl ClipboardState {
         settings: ClipboardSettings,
     ) -> Result<ClipboardSettings, String> {
         let settings = settings.normalized(self.build_enabled);
+        let current = self
+            .settings
+            .read()
+            .map_err(|_| "Clipboard settings lock poisoned".to_string())?
+            .clone();
+        if current == settings {
+            return Ok(settings);
+        }
         if settings.enabled {
             self.ensure_store(&settings)?;
         }

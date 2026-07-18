@@ -414,6 +414,28 @@ document.title += " [D面板已注入]";
   }
 
   // ====== Tab switching ======
+  function capabilitySummary(name) {
+    var map = {
+      general: "能力摘要：主题切换 / 中英文界面 / 本地配置",
+      adblock: "能力摘要：EasyList 规则 / 自定义规则 / 页面拦截统计",
+      cache: "能力摘要：HTTP 缓存 / 本地存储 / 离线访问",
+      clipboard: "能力摘要：系统级监听 / 本地 SQLite / 快捷键唤起",
+      data: "能力摘要：导入导出 / 本地备份 / 版本回滚",
+      about: "能力摘要：运行诊断 / 环境信息 / 一键复制报告",
+    };
+    if (!map[name]) return null;
+    var node = el(
+      "div",
+      "position:relative;display:inline-flex;align-items:center;gap:7px;margin:-8px 0 16px;padding:7px 11px;border:1px solid rgba(59,130,246,.14);border-radius:999px;background:rgba(239,246,255,.72);color:#2563eb;font-size:10px;font-weight:700;box-shadow:0 8px 22px rgba(59,130,246,.08);overflow:hidden",
+    );
+    node.className = "__ps_summary_pill__";
+    node.innerHTML =
+      '<span style="width:7px;height:7px;border-radius:999px;background:#22c55e;box-shadow:0 0 10px rgba(34,197,94,.65);animation:__ps_dot_breathe__ 1.6s ease-in-out infinite;flex-shrink:0"></span><span>' +
+      map[name] +
+      "</span>";
+    return node;
+  }
+
   function switchTab(name) {
     T = name;
     var body = document.getElementById("__ps_body__");
@@ -437,6 +459,8 @@ document.title += " [D面板已注入]";
     body.appendChild(
       txt(m[1], "font-size:11px;color:#94a3b8;margin-bottom:18px"),
     );
+    var summary = capabilitySummary(name);
+    if (summary) body.appendChild(summary);
 
     if (name === "general") {
       buildGeneral(body);
@@ -1369,13 +1393,23 @@ document.title += " [D面板已注入]";
     return I("clipboard_get_settings")
       .then(function (current) {
         var retentionDays = Number(clipboard.retention_days);
+        var next = {
+          enabled: !!clipboard.enabled,
+          max_items: clipboard.max_records || 2000,
+          retention_days: Number.isNaN(retentionDays) ? 30 : retentionDays,
+          ignore_short_text: !!clipboard.ignore_short,
+        };
+        if (
+          current &&
+          current.enabled === next.enabled &&
+          current.max_items === next.max_items &&
+          current.retention_days === next.retention_days &&
+          current.ignore_short_text === next.ignore_short_text
+        ) {
+          return current;
+        }
         return I("clipboard_update_settings", {
-          settings: Object.assign({}, current || {}, {
-            enabled: !!clipboard.enabled,
-            max_items: clipboard.max_records || 2000,
-            retention_days: Number.isNaN(retentionDays) ? 30 : retentionDays,
-            ignore_short_text: !!clipboard.ignore_short,
-          }),
+          settings: Object.assign({}, current || {}, next),
         });
       })
       .catch(function () {});
@@ -1472,7 +1506,16 @@ document.title += " [D面板已注入]";
       "position:fixed;width:280px;background:#fff;color:#1e293b;border-radius:14px;padding:16px;box-shadow:0 14px 45px rgba(15,23,42,.35);transition:all .2s",
     );
     var index = 0;
+    var activeTarget = null;
+    var activeTargetZ = "";
+    function restoreTarget() {
+      if (!activeTarget) return;
+      activeTarget.style.zIndex = activeTargetZ;
+      activeTarget = null;
+      activeTargetZ = "";
+    }
     function closeTour() {
+      restoreTarget();
       if (mask.parentNode) mask.parentNode.removeChild(mask);
     }
     function renderStep() {
@@ -1482,6 +1525,10 @@ document.title += " [D面板已注入]";
         closeTour();
         return;
       }
+      restoreTarget();
+      activeTarget = target;
+      activeTargetZ = target.style.zIndex || "";
+      target.style.zIndex = "2147483648";
       var rect = target.getBoundingClientRect();
       highlight.style.left = Math.max(4, rect.left - 6) + "px";
       highlight.style.top = Math.max(4, rect.top - 6) + "px";
@@ -1601,12 +1648,150 @@ document.title += " [D面板已注入]";
     });
   }
   function renderWelcomeStatsFallback() {
+    renderWorkbench(null);
+    return;
     var cards = document.getElementById("__ps_welcome_cards__");
     if (!cards) return;
     cards.innerHTML =
       card2("🛡", "Adblock", "ready", "#16a34a") +
       card2("💾", "Cache", "ready", "#16a34a") +
       card2("📋", "Clipboard", "ready", "#16a34a");
+  }
+  function getRecentVisits() {
+    try {
+      return JSON.parse(localStorage.getItem("__ps_recent_visits__") || "[]")
+        .filter(function (item) {
+          return item && item.url;
+        })
+        .slice(0, 4);
+    } catch (e) {
+      return [];
+    }
+  }
+  function addRecentVisit(url) {
+    try {
+      var list = getRecentVisits().filter(function (item) {
+        return item.url !== url;
+      });
+      list.unshift({ url: url, time: Date.now() });
+      localStorage.setItem("__ps_recent_visits__", JSON.stringify(list.slice(0, 4)));
+    } catch (e) {}
+  }
+  function workbenchMetric(label, value, icon) {
+    return (
+      '<div style="background:rgba(255,255,255,.62);border:1px solid rgba(148,163,184,.24);border-radius:13px;padding:10px 8px;text-align:left;box-shadow:0 12px 30px rgba(15,23,42,.06);backdrop-filter:blur(12px)"><div style="font-size:16px;margin-bottom:5px">' +
+      icon +
+      '</div><div style="font-size:11px;font-weight:800;color:#0f172a;margin-bottom:3px">' +
+      label +
+      '</div><div style="font-size:10px;color:#64748b;line-height:1.35;min-height:26px">' +
+      value +
+      "</div></div>"
+    );
+  }
+  function renderWorkbench(stats) {
+    var root = document.getElementById("__ps_workbench__");
+    if (!root) return;
+    var m = stats || {};
+    var recent = getRecentVisits();
+    var recentHtml = recent.length
+      ? recent
+          .map(function (item) {
+            return (
+              '<button type="button" data-url="' +
+              item.url.replace(/"/g, "&quot;") +
+              '" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;border:none;background:rgba(255,255,255,.58);border-radius:10px;padding:8px 10px;color:#334155;font-size:11px;cursor:pointer;text-align:left"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+              item.url +
+              '</span><span style="color:#94a3b8;flex-shrink:0">Open</span></button>'
+            );
+          })
+          .join("")
+      : '<div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.52);color:#94a3b8;font-size:11px">暂无最近访问，输入 URL 后点击 Start 会自动记录</div>';
+    root.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-size:13px;font-weight:900;color:#0f172a">工作台首页</div><div style="font-size:10px;color:#64748b">实时状态</div></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">' +
+      workbenchMetric("剪切板", m.clipboard?.summary || "ready", "📋") +
+      workbenchMetric("广告拦截", m.adblock?.summary || "ready", "🛡") +
+      workbenchMetric("离线缓存", m.cache?.summary || "ready", "💾") +
+      "</div>" +
+      '<div style="display:grid;grid-template-columns:1fr;gap:6px"><div style="font-size:11px;font-weight:800;color:#334155;text-align:left">最近访问</div>' +
+      recentHtml +
+      "</div>";
+    root.querySelectorAll("button[data-url]").forEach(function (button) {
+      button.onclick = function () {
+        var url = button.getAttribute("data-url");
+        if (url) location.href = url;
+      };
+    });
+  }
+  function workbenchStatusCard(label, value, icon) {
+    var textValue = String(value || "ready");
+    var metric = textValue.match(/(\d+(?:\.\d+)?\s?(?:MB|GB|records|rules)?)/i);
+    var metricText = metric ? metric[1] : "OK";
+    var visualMap = {
+      Adblock: ["规则匹配", "实时拦截"],
+      Cache: ["本地缓存", "容量管理"],
+      Clipboard: ["系统监听", "历史复用"],
+    };
+    var chips = visualMap[label] || ["运行状态", "本地能力"];
+    return (
+      '<div class="__ps_workbench_card__" style="background:rgba(255,255,255,.68);border:1px solid rgba(148,163,184,.28);border-radius:16px;padding:14px 10px;text-align:center;box-shadow:0 16px 38px rgba(15,23,42,.08);backdrop-filter:blur(14px)"><div style="width:38px;height:38px;margin:0 auto 7px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);border:1px solid rgba(59,130,246,.16);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#2563eb">' +
+      icon +
+      '</div><div style="font-size:12px;font-weight:800;color:#0f172a;margin-bottom:4px">' +
+      label +
+      '</div><div style="display:flex;justify-content:center;gap:4px;flex-wrap:wrap;margin-bottom:7px"><span class="__ps_status_badge__">已启用</span><span class="__ps_status_badge__">运行中</span><span class="__ps_status_badge__">本地存储</span></div><div style="font-size:19px;line-height:1;font-weight:900;color:#2563eb;margin-bottom:5px">' +
+      metricText +
+      '</div><div style="font-size:10px;color:#16a34a;line-height:1.35;min-height:26px">' +
+      value +
+      '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px"><span class="__ps_feature_chip__">' +
+      chips[0] +
+      '</span><span class="__ps_feature_chip__">' +
+      chips[1] +
+      '</span></div><div class="__ps_card_signal__"><span></span></div></div>'
+    );
+  }
+  function startDemoTour() {
+    try {
+      localStorage.removeItem("__ps_drag_hint_seen__");
+    } catch (e) {}
+    showDragHint();
+  }
+  function renderWorkbench(stats) {
+    var root = document.getElementById("__ps_workbench__");
+    if (!root) return;
+    var m = stats || {};
+    var recent = getRecentVisits();
+    var recentHtml = recent.length
+      ? recent
+          .map(function (item) {
+            return (
+              '<button type="button" data-url="' +
+              item.url.replace(/"/g, "&quot;") +
+              '" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;border:none;background:rgba(255,255,255,.58);border-radius:10px;padding:8px 10px;color:#334155;font-size:11px;cursor:pointer;text-align:left"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+              item.url +
+              '</span><span style="color:#94a3b8;flex-shrink:0">Open</span></button>'
+            );
+          })
+          .join("")
+      : '<div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.52);color:#94a3b8;font-size:11px">暂无最近访问，输入 URL 后点击 Start 会自动记录</div>';
+    root.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-size:13px;font-weight:900;color:#0f172a">工作台首页</div><div style="display:flex;align-items:center;gap:6px"><button id="__ps_demo_tour__" type="button" style="height:24px;padding:0 10px;border:1px solid rgba(59,130,246,.2);border-radius:999px;background:rgba(239,246,255,.72);color:#2563eb;font-size:10px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(59,130,246,.08)">演示模式</button><div style="font-size:10px;color:#64748b">实时状态</div></div></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">' +
+      workbenchStatusCard("Adblock", m.adblock?.summary || "ready", "🛡") +
+      workbenchStatusCard("Cache", m.cache?.summary || "ready", "💾") +
+      workbenchStatusCard("Clipboard", m.clipboard?.summary || "ready", "📋") +
+      "</div>" +
+      '<div class="__ps_capability_flow__"><span>系统监听</span><i></i><span>规则处理</span><i></i><span>本地存储</span><i></i><span>快捷唤起</span></div>' +
+      '<div style="display:grid;grid-template-columns:1fr;gap:6px"><div style="font-size:11px;font-weight:800;color:#334155;text-align:left">最近访问</div>' +
+      recentHtml +
+      "</div>";
+    root.querySelectorAll("button[data-url]").forEach(function (button) {
+      button.onclick = function () {
+        var url = button.getAttribute("data-url");
+        if (url) location.href = url;
+      };
+    });
+    var demo = document.getElementById("__ps_demo_tour__");
+    if (demo) demo.onclick = startDemoTour;
   }
   function ensureWelcomeStyle() {
     if (document.getElementById("__ps_welcome_style__")) return;
@@ -1615,8 +1800,17 @@ document.title += " [D面板已注入]";
     style.textContent =
       "@keyframes __ps_bubble_up__{0%{transform:translateY(40px) scale(.68);opacity:0}12%{opacity:.72}76%{opacity:.42}100%{transform:translateY(-115vh) scale(1.12);opacity:0}}" +
       "@keyframes __ps_welcome_float__{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}" +
+      "@keyframes __ps_signal_run__{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}" +
+      "@keyframes __ps_dot_breathe__{0%,100%{opacity:.42;transform:scale(.92)}50%{opacity:1;transform:scale(1.08)}}" +
       "#__ps_bubbles__ span{position:absolute;bottom:-240px;border-radius:999px;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.96),rgba(251,146,60,.28) 54%,rgba(251,191,36,.12));border:1px solid rgba(251,146,60,.22);box-shadow:0 24px 70px rgba(251,146,60,.16),inset 0 0 28px rgba(255,255,255,.55);animation:__ps_bubble_up__ linear infinite;will-change:transform,opacity}" +
-      "#__ps_bubbles__ span:nth-child(even){background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.96),rgba(244,114,182,.26) 54%,rgba(251,207,232,.14));border-color:rgba(244,114,182,.2);box-shadow:0 24px 70px rgba(244,114,182,.15),inset 0 0 28px rgba(255,255,255,.55)}";
+      "#__ps_bubbles__ span:nth-child(even){background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.96),rgba(244,114,182,.26) 54%,rgba(251,207,232,.14));border-color:rgba(244,114,182,.2);box-shadow:0 24px 70px rgba(244,114,182,.15),inset 0 0 28px rgba(255,255,255,.55)}" +
+      ".__ps_workbench_card__{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}" +
+      ".__ps_workbench_card__:hover{transform:translateY(-3px);border-color:rgba(59,130,246,.32);box-shadow:0 22px 55px rgba(59,130,246,.16),0 10px 26px rgba(15,23,42,.08)}" +
+      ".__ps_status_badge__{display:inline-flex;align-items:center;height:17px;padding:0 6px;border-radius:999px;background:rgba(240,253,244,.82);border:1px solid rgba(34,197,94,.16);color:#16a34a;font-size:9px;font-weight:800;white-space:nowrap}" +
+      ".__ps_status_badge__::before{content:'';width:5px;height:5px;margin-right:4px;border-radius:999px;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.65);animation:__ps_dot_breathe__ 1.6s ease-in-out infinite}" +
+      ".__ps_feature_chip__{height:19px;display:flex;align-items:center;justify-content:center;border-radius:7px;background:rgba(239,246,255,.74);border:1px solid rgba(59,130,246,.12);color:#2563eb;font-size:9px;font-weight:800;white-space:nowrap}" +
+      ".__ps_card_signal__{position:relative;height:3px;margin-top:9px;border-radius:999px;overflow:hidden;background:rgba(191,219,254,.72)}.__ps_card_signal__ span{position:absolute;inset:0;width:38%;border-radius:999px;background:linear-gradient(90deg,transparent,#3b82f6,transparent);animation:__ps_signal_run__ 2.2s linear infinite}" +
+      ".__ps_capability_flow__{display:flex;align-items:center;gap:6px;margin:0 0 10px;padding:8px 9px;border-radius:12px;background:rgba(255,255,255,.56);border:1px solid rgba(148,163,184,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}.__ps_capability_flow__ span{flex:1;min-width:0;text-align:center;color:#334155;font-size:10px;font-weight:800;white-space:nowrap}.__ps_capability_flow__ i{width:18px;height:2px;border-radius:999px;background:linear-gradient(90deg,#bfdbfe,#60a5fa,#bfdbfe);box-shadow:0 0 10px rgba(59,130,246,.24)}";
     document.head.appendChild(style);
   }
   function renderWelcomeBubbles(bg) {
@@ -1682,8 +1876,6 @@ document.title += " [D面板已注入]";
       '<div style="width:72px;height:72px;margin:0 auto 20px;background:linear-gradient(135deg,#3b82f6,#7c3aed);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#fff;box-shadow:0 20px 45px rgba(59,130,246,.32);animation:__ps_welcome_float__ 3.2s ease-in-out infinite">P</div>' +
       '<h1 style="font-size:31px;font-weight:900;color:#0f172a;margin:0 0 6px;letter-spacing:0">Pake Plus</h1>' +
       '<p style="font-size:13px;color:#64748b;margin:0 0 24px">Lightweight desktop app with superpowers</p>' +
-      '<div style="display:flex;gap:12px;margin-bottom:24px" id="__ps_welcome_cards__">' +
-      '<div style="color:#64748b;font-size:12px">Loading...</div></div>' +
       '<input id="__ps_welcome_url__" type="text" placeholder="Enter URL to open..." ' +
       'style="width:100%;padding:15px 18px;border:1px solid rgba(148,163,184,.36);border-radius:14px;' +
       "font-size:15px;font-family:SF Mono,Consolas,monospace;color:#0f172a;margin-bottom:20px;" +
@@ -1693,7 +1885,8 @@ document.title += " [D面板已注入]";
       '"><br>' +
       '<button id="__ps_welcome_start__" ' +
       'style="padding:14px 60px;border:none;border-radius:14px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 18px 35px rgba(37,99,235,.28)">' +
-      "Start</button>";
+      "Start</button>" +
+      '<div id="__ps_workbench__" style="margin-top:22px;background:rgba(255,255,255,.5);border:1px solid rgba(148,163,184,.24);border-radius:18px;padding:14px;box-shadow:0 18px 48px rgba(15,23,42,.08);backdrop-filter:blur(16px)"></div>';
     document.body.appendChild(w);
 
     // Bind events
@@ -1713,6 +1906,8 @@ document.title += " [D面板已注入]";
           try {
             localStorage.setItem("__ps_drag_hint_pending__", "1");
           } catch (e) {}
+          addRecentVisit(u);
+          renderWorkbench(null);
           location.href = u;
           return;
         }
@@ -1735,12 +1930,15 @@ document.title += " [D面板已注入]";
     }
 
     // Load status
+    renderWorkbench(null);
     var cards = document.getElementById("__ps_welcome_cards__");
     if (cards)
       cards.innerHTML =
         '<div style="color:#94a3b8;font-size:12px">Loading...</div>';
     withTimeout(I("get_module_stats"), 1500)
       .then(function (m) {
+        renderWorkbench(m);
+        return;
         var cards2 = document.getElementById("__ps_welcome_cards__");
         if (!cards2) return;
         cards2.innerHTML =
