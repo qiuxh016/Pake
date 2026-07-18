@@ -5,7 +5,7 @@
 <h1 align="center">Pake Plus</h1>
 <p align="center"><strong>Desktop browser app based on Pake —— Adblock · Cache · Clipboard · Settings</strong></p>
 
-<p align="center">Welcome page with URL input  ·  Auto-complete  ·  Desktop shortcut  ·  Multi-module integration</p>
+<p align="center">Bubble welcome page  ·  Auto-complete URL  ·  Draggable buttons  ·  Desktop shortcut  ·  85 tests PASS</p>
 
 ## Features
 
@@ -45,7 +45,7 @@ System-level clipboard monitoring with automatic recording, full-text search, an
 A unified control center managing all module configurations, plus welcome page navigation and desktop deployment:
 
 - **Welcome Page & URL Navigation**: Full-screen dark welcome page on startup with Pake Plus branding, three live module status cards (via `get_module_stats` IPC), URL input with auto-complete (auto-add `https://` prefix and `.com` suffix for bare domains, case normalization), and Start button. Navigation keeps welcome visible during transition (no page flash). `window.name` cross-origin flag prevents re-showing on subsequent loads.
-- **🏠 Home / ↻ Refresh / ⚙ Settings Buttons**: Three floating buttons created via pure DOM API — bottom-left Home button returns to welcome page; top-right Refresh reloads the current URL; bottom-right gear opens settings panel
+- **🏠 Home / ↻ Refresh / ⚙ Settings Buttons**: Three draggable floating buttons — bottom-left Home returns to welcome page; top-right Refresh reloads the URL; bottom-right gear opens settings panel. Always on top with max z-index
 - **Visual Configuration**: Right-side sliding drawer with six tabs (General / Adblock / Cache / Clipboard / Data / About); changes apply immediately and persist to local JSON; opened via gear button, tray menu "Settings", or `Ctrl+Shift+,`
 - **Theme & Language**: Dark/light theme toggle; Chinese/English interface switching; Rust enum types ensure compile-time safety
 - **Data Export**: One-click export to Downloads as `.pake-data-YYYYMMDD.zip` with `manifest.json`; supports custom save path via native file dialog (`rfd`)
