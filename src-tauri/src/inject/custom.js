@@ -255,6 +255,10 @@ document.title += " [D面板已注入]";
     t.onclick = function () {
       t.classList.toggle("on");
       t.style.background = t.classList.contains("on") ? "#3b82f6" : "#cbd5e1";
+      if (id === "__ps_theme__") {
+        theme = t.classList.contains("on") ? "dark" : "light";
+        applyTheme();
+      }
       dirty = true;
     };
     return t;
@@ -354,7 +358,7 @@ document.title += " [D面板已注入]";
   function buildPanel() {
     P = el("div");
     P.innerHTML =
-      '<div id="__ps__" style="position:fixed;top:0;right:0;width:400px;height:100vh;z-index:2147483640;background:#fff;box-shadow:-8px 0 40px rgba(0,0,0,.12);display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Microsoft YaHei,sans-serif;font-size:13px;color:#1e293b;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)">' +
+      '<div id="__ps__" style="position:fixed;top:0;right:0;width:400px;height:100vh;z-index:2147483647;background:#fff;box-shadow:-8px 0 40px rgba(0,0,0,.12);display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Microsoft YaHei,sans-serif;font-size:13px;color:#1e293b;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f1f5f9;flex-shrink:0"><div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700">P</div><div><div id="__ps_title__" style="font-weight:700;font-size:14px;color:#0f172a">Pake Plus</div><div id="__ps_sub__" style="font-size:10px;color:#94a3b8">Settings</div></div></div><button id="__ps_close__" style="width:32px;height:32px;border:none;background:#f1f5f9;color:#64748b;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button></div>' +
       '<div style="display:flex;flex:1;overflow:hidden"><div id="__ps_nav__" style="width:120px;background:#f8fafc;flex-shrink:0;padding:12px 0;overflow-y:auto;border-right:1px solid #f1f5f9"></div><div style="flex:1;display:flex;flex-direction:column;overflow:hidden"><div id="__ps_body__" style="flex:1;overflow-y:auto;padding:20px"></div><div style="padding:10px 20px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0"><span style="font-size:10px;color:#94a3b8">ESC to close</span><div style="display:flex;gap:8px"><button id="__ps_cancel__" style="padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;color:#64748b;cursor:pointer;font-size:12px;font-weight:600">Cancel</button><button id="__ps_save__" style="padding:8px 20px;border:none;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(59,130,246,.2)">Save</button></div></div></div></div></div>';
     document.body.appendChild(P);
@@ -466,6 +470,11 @@ document.title += " [D面板已注入]";
     sel.id = "__ps_lang__";
     sel.innerHTML =
       '<option value="zh">中文</option><option value="en">English</option>';
+    sel.onchange = function () {
+      lang = sel.value === "en" ? "en" : "zh";
+      dirty = true;
+      switchTab(T);
+    };
     c.appendChild(row(t("ll"), null, sel));
 
     var c2 = card();
@@ -649,6 +658,10 @@ document.title += " [D面板已注入]";
         b.onclick = function () {
           b.textContent = "打开中...";
           b.disabled = true;
+          openClipboardSearchPanel().finally(function () {
+            b.disabled = false;
+          });
+          return;
           try {
             var T = window.__TAURI__ || window.__TAURI_INTERNALS__;
             var inv = T && (T.invoke || (T.core && T.core.invoke));
@@ -1008,6 +1021,11 @@ document.title += " [D面板已注入]";
     var prevText = btn.textContent;
     btn.textContent = "...";
     btn.disabled = true;
+    var saveTimer = setTimeout(function () {
+      btn.textContent = prevText;
+      btn.disabled = false;
+      toast("Save is still running, please wait");
+    }, 2000);
     var prev = S || { adblock: {}, cache: {}, clipboard: {}, general: {} };
     var s = {
       adblock: {
@@ -1042,9 +1060,12 @@ document.title += " [D面板已注入]";
         max_records: document.getElementById("__ps_cmax__")
           ? parseInt(document.getElementById("__ps_cmax__").value) || 2000
           : (prev.clipboard || {}).max_records || 2000,
-        retention_days: document.getElementById("__ps_cret__")
-          ? parseInt(document.getElementById("__ps_cret__").value) || 30
-          : (prev.clipboard || {}).retention_days || 30,
+        retention_days: (function () {
+          var retention = document.getElementById("__ps_cret__");
+          if (!retention) return (prev.clipboard || {}).retention_days || 30;
+          var value = parseInt(retention.value, 10);
+          return isNaN(value) ? 30 : value;
+        })(),
         ignore_short: document.getElementById("__ps_cshort__")
           ? tglOn("__ps_cshort__")
           : (prev.clipboard || {}).ignore_short,
@@ -1062,6 +1083,9 @@ document.title += " [D面板已注入]";
     I("validate_settings", { settings: s })
       .then(function () {
         I("save_settings", { settings: s })
+          .then(function () {
+            return syncClipboardRuntime(s.clipboard);
+          })
           .then(function () {
             var ot = theme,
               ol = lang;
@@ -1142,11 +1166,13 @@ document.title += " [D面板已注入]";
             toast(t("tf") + ": " + e);
           })
           .finally(function () {
+            clearTimeout(saveTimer);
             btn.textContent = prevText;
             btn.disabled = false;
           });
       })
       .catch(function (errors) {
+        clearTimeout(saveTimer);
         btn.textContent = prevText;
         btn.disabled = false;
         toast(
@@ -1334,6 +1360,64 @@ document.title += " [D面板已注入]";
   }
 
   // ====== Welcome page ======
+  function fitWelcomeToViewport(bg) {
+    if (!bg) return;
+    bg.style.width = Math.max(window.innerWidth || 0, 1) + "px";
+    bg.style.height = Math.max(window.innerHeight || 0, 1) + "px";
+  }
+  function syncClipboardRuntime(clipboard) {
+    return I("clipboard_get_settings")
+      .then(function (current) {
+        var retentionDays = Number(clipboard.retention_days);
+        return I("clipboard_update_settings", {
+          settings: Object.assign({}, current || {}, {
+            enabled: !!clipboard.enabled,
+            max_items: clipboard.max_records || 2000,
+            retention_days: Number.isNaN(retentionDays) ? 30 : retentionDays,
+            ignore_short_text: !!clipboard.ignore_short,
+          }),
+        });
+      })
+      .catch(function () {});
+  }
+  function openClipboardSearchPanel() {
+    return I("clipboard_show_panel", { query: "" }).catch(function (e) {
+      console.error("[Pake] open clipboard search failed:", e);
+      toast("Clipboard search failed: " + e);
+    });
+  }
+  function withTimeout(promise, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        reject(new Error("timeout"));
+      }, timeoutMs);
+      promise
+        .then(function (value) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch(function (error) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+  function renderWelcomeStatsFallback() {
+    var cards = document.getElementById("__ps_welcome_cards__");
+    if (!cards) return;
+    cards.innerHTML =
+      card2("🛡", "Adblock", "ready", "#16a34a") +
+      card2("💾", "Cache", "ready", "#16a34a") +
+      card2("📋", "Clipboard", "ready", "#16a34a");
+  }
+
   function showWelcome() {
     // Always allow welcome to show via button, skip auto-show only if flagged
     if (window.name === "pw") return;
@@ -1344,10 +1428,14 @@ document.title += " [D面板已注入]";
       bg = document.createElement("div");
       bg.id = "__ps_welcome_bg__";
       bg.style.cssText =
-        "position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2147483646;" +
+        "position:fixed;top:0;left:0;right:auto;bottom:auto;z-index:2147483646;" +
         "background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%)";
       document.body.appendChild(bg);
+      window.addEventListener("resize", function () {
+        fitWelcomeToViewport(bg);
+      });
     }
+    fitWelcomeToViewport(bg);
 
     // Centered card
     var w = document.getElementById("__ps_welcome__");
@@ -1416,7 +1504,7 @@ document.title += " [D面板已注入]";
     if (cards)
       cards.innerHTML =
         '<div style="color:#94a3b8;font-size:12px">Loading...</div>';
-    I("get_module_stats")
+    withTimeout(I("get_module_stats"), 1500)
       .then(function (m) {
         var cards2 = document.getElementById("__ps_welcome_cards__");
         if (!cards2) return;
@@ -1442,12 +1530,7 @@ document.title += " [D面板已注入]";
       })
       .catch(function (e) {
         console.error("[Pake] welcome stats failed:", e);
-        var cards3 = document.getElementById("__ps_welcome_cards__");
-        if (cards3)
-          cards3.innerHTML =
-            '<div style="color:#ef4444;font-size:12px">Failed to load: ' +
-            (e || "unknown") +
-            "</div>";
+        renderWelcomeStatsFallback();
       });
   }
   function card2(icon, name, status, color) {
@@ -1479,7 +1562,7 @@ document.title += " [D面板已注入]";
     // Refresh button
     var __prb = document.createElement("div");
     __prb.style.cssText =
-      "position:fixed;top:20px;right:20px;z-index:2147483640;width:40px;height:40px;background:#fff;border:2px solid #3b82f6;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#3b82f6;font-size:20px;font-weight:700;box-shadow:0 2px 12px rgba(59,130,246,.2);transition:transform .15s;user-select:none";
+      "position:fixed;bottom:124px;right:20px;z-index:2147483646;width:40px;height:40px;background:#fff;border:2px solid #3b82f6;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#3b82f6;font-size:20px;font-weight:700;box-shadow:0 2px 12px rgba(59,130,246,.2);transition:transform .15s;user-select:none";
     __prb.textContent = "↻";
     __prb.title = "Refresh page";
     __prb.onclick = function () {
@@ -1487,10 +1570,24 @@ document.title += " [D面板已注入]";
     };
     document.body.appendChild(__prb);
 
+    // Clipboard search button
+    var __pcb = document.createElement("button");
+    __pcb.type = "button";
+    __pcb.style.cssText =
+      "position:fixed;bottom:72px;right:20px;z-index:2147483646;width:40px;height:40px;background:#fff;border:2px solid #3b82f6;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#3b82f6;font-size:18px;font-weight:700;box-shadow:0 2px 12px rgba(59,130,246,.2);transition:transform .15s;user-select:none";
+    __pcb.textContent = "⌕";
+    __pcb.title = "Search clipboard history";
+    __pcb.setAttribute("aria-label", "Search clipboard history");
+    __pcb.onclick = function () {
+      openClipboardSearchPanel();
+    };
+    document.body.appendChild(__pcb);
+
     // Settings button
     var __pgb = document.createElement("div");
+    __pgb.id = "__ps_fab_inner__";
     __pgb.style.cssText =
-      "position:fixed;bottom:20px;right:20px;z-index:2147483640;width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;box-shadow:0 4px 16px rgba(59,130,246,.35);transition:transform .15s;user-select:none";
+      "position:fixed;bottom:20px;right:20px;z-index:2147483646;width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:800;box-shadow:0 4px 16px rgba(59,130,246,.35);transition:transform .15s;user-select:none";
     __pgb.textContent = "⚙";
     __pgb.title = "Pake Plus Settings";
     __pgb.onclick = function () {
@@ -1501,7 +1598,7 @@ document.title += " [D面板已注入]";
     // Home/Welcome button (bottom-left)
     var __phb = document.createElement("div");
     __phb.style.cssText =
-      "position:fixed;bottom:20px;left:20px;z-index:2147483640;width:40px;height:40px;" +
+      "position:fixed;bottom:20px;left:20px;z-index:2147483646;width:40px;height:40px;" +
       "background:#fff;border:2px solid #e2e8f0;border-radius:12px;cursor:pointer;" +
       "display:flex;align-items:center;justify-content:center;font-size:18px;" +
       "box-shadow:0 2px 8px rgba(0,0,0,.06);transition:transform .15s;user-select:none";

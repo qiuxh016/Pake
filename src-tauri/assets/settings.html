@@ -249,6 +249,66 @@
         resize: vertical;
         color: #334155;
       }
+      body.dark {
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      body.dark nav {
+        background: #111827;
+        border-right-color: #1f2937;
+      }
+      body.dark .nav-item {
+        color: #94a3b8;
+      }
+      body.dark .nav-item:hover {
+        background: #1f2937;
+        color: #e2e8f0;
+      }
+      body.dark .nav-item.active {
+        background: #172554;
+        color: #60a5fa;
+      }
+      body.dark .header,
+      body.dark .footer {
+        border-color: #1f2937;
+      }
+      body.dark .card {
+        background: #111827;
+        border-color: #1f2937;
+        box-shadow: none;
+      }
+      body.dark .card-title,
+      body.dark .row-label {
+        color: #e2e8f0;
+      }
+      body.dark .card-desc,
+      body.dark .row-hint,
+      body.dark .footer span {
+        color: #94a3b8;
+      }
+      body.dark .row {
+        border-bottom-color: #1f2937;
+      }
+      body.dark select,
+      body.dark textarea {
+        background: #1f2937;
+        border-color: #334155;
+        color: #e2e8f0;
+      }
+      body.dark select option {
+        background: #1f2937;
+        color: #e2e8f0;
+      }
+      body.dark .btn-outline {
+        background: #111827;
+        border-color: #334155;
+        color: #cbd5e1;
+      }
+      body.dark .btn-dashed {
+        background: #172554;
+        border-color: #60a5fa;
+        color: #93c5fd;
+      }
     </style>
   </head>
   <body>
@@ -492,6 +552,7 @@
           document.querySelectorAll(".nav-item").forEach(function (el, i) {
             el.classList.toggle("active", tabs[i][0] === T);
           });
+          refreshChromeText();
           var c = document.getElementById("content");
           c.innerHTML = "";
           if (T === "general") renderGeneral(c);
@@ -544,6 +605,11 @@
           if (id) b.id = id;
           b.onclick = function () {
             b.classList.toggle("on");
+            if (id === "__ps_theme__") {
+              applyTheme(
+                b.classList.contains("on") ? "dark" : "light",
+              );
+            }
             dirty = true;
           };
           return b;
@@ -552,6 +618,16 @@
         function renderGeneral(c) {
           var ca = card(t("gt"), t("gd"));
           ca.appendChild(row(t("tl"), t("th"), tgBtn("__ps_theme__")));
+          var langSelect = document.createElement("select");
+          langSelect.id = "__ps_lang__";
+          langSelect.innerHTML =
+            '<option value="zh">中文</option><option value="en">English</option>';
+          langSelect.onchange = function () {
+            lang = langSelect.value === "en" ? "en" : "zh";
+            dirty = true;
+            render();
+          };
+          ca.appendChild(row(t("ll"), null, langSelect));
           ca.appendChild(
             row(
               t("rl"),
@@ -649,16 +725,9 @@
           b.textContent = "📋 " + t("ptest");
           b.title = t("ptesth");
           b.onclick = function () {
-            I("clipboard_show_panel").catch(function () {});
-            // Also try to find and toggle C sidebar in the main window
-            try {
-              window.__TAURI__ &&
-                window.__TAURI__.core &&
-                window.__TAURI__.core.invoke(
-                  "plugin:global-shortcut|simulate",
-                  { shortcut: "Ctrl+Shift+V" },
-                );
-            } catch (e) {}
+            I("clipboard_show_panel", { query: "" }).catch(function (e) {
+              toast(t("tf") + ": " + e);
+            });
           };
           r.appendChild(b);
           c.appendChild(r);
@@ -806,14 +875,35 @@
             "</span></div>"
           );
         }
+        function refreshChromeText() {
+          var keys = ["general", "adblock", "cache", "clipboard", "data", "about"];
+          document.querySelectorAll(".nav-item").forEach(function (el, i) {
+            var spans = el.querySelectorAll("span");
+            if (spans[1] && keys[i]) spans[1].textContent = t(keys[i]);
+          });
+          document.getElementById("saveBtn").textContent = t("sv");
+          document.getElementById("cancelBtn").textContent = t("cc");
+        }
+        function applyTheme(value) {
+          var next =
+            value ||
+            ((settings || {}).general || {}).theme ||
+            "light";
+          document.body.classList.toggle("dark", next === "dark");
+        }
 
         function fillForm() {
           if (!settings) return;
           var s = settings;
+          applyTheme((s.general || {}).theme);
           if (document.getElementById("__ps_theme__")) {
             document
               .getElementById("__ps_theme__")
               .classList.toggle("on", (s.general || {}).theme === "dark");
+          }
+          if (document.getElementById("__ps_lang__")) {
+            document.getElementById("__ps_lang__").value =
+              (s.general || {}).language === "en" ? "en" : "zh";
           }
           if (document.getElementById("__ps_ab__")) {
             document
@@ -844,8 +934,9 @@
               (s.clipboard || {}).max_records || 2000;
           }
           if (document.getElementById("__ps_cret__")) {
+            var rd = (s.clipboard || {}).retention_days;
             document.getElementById("__ps_cret__").value =
-              (s.clipboard || {}).retention_days || 30;
+              typeof rd === "number" ? rd : 30;
           }
           if (document.getElementById("__ps_cshort__")) {
             document
@@ -862,6 +953,12 @@
           var themeEl = document.getElementById("__ps_theme__");
           g.theme =
             themeEl && themeEl.classList.contains("on") ? "dark" : "light";
+          var langEl = document.getElementById("__ps_lang__");
+          g.language = langEl
+            ? langEl.value === "en"
+              ? "en"
+              : "zh"
+            : g.language || "zh";
           var ab = settings
             ? JSON.parse(JSON.stringify(settings.adblock || {}))
             : {};
@@ -891,7 +988,12 @@
           var cmEl = document.getElementById("__ps_cmax__");
           cl.max_records = cmEl ? parseInt(cmEl.value) || 2000 : 2000;
           var crEl = document.getElementById("__ps_cret__");
-          cl.retention_days = crEl ? parseInt(crEl.value) || 30 : 30;
+          if (crEl) {
+            var retentionDays = parseInt(crEl.value, 10);
+            cl.retention_days = isNaN(retentionDays) ? 30 : retentionDays;
+          } else {
+            cl.retention_days = 30;
+          }
           var cs2El = document.getElementById("__ps_cshort__");
           cl.ignore_short = cs2El ? cs2El.classList.contains("on") : true;
           lang = g.language === "en" ? "en" : "zh";
@@ -902,13 +1004,31 @@
           var s = collect();
           I("save_settings", { settings: s })
             .then(function () {
-              settings = s;
-              dirty = false;
-              toast(t("ts"));
+              return syncClipboardRuntime(s.clipboard).then(function () {
+                settings = s;
+                applyTheme((settings.general || {}).theme);
+                refreshChromeText();
+                dirty = false;
+                toast(t("ts"));
+              });
             })
             .catch(function (e) {
               toast(t("tf") + ": " + e);
             });
+        }
+        function syncClipboardRuntime(clipboard) {
+          return I("clipboard_get_settings")
+            .then(function (current) {
+              return I("clipboard_update_settings", {
+                settings: Object.assign({}, current || {}, {
+                  enabled: !!clipboard.enabled,
+                  max_items: clipboard.max_records || 2000,
+                  retention_days: clipboard.retention_days,
+                  ignore_short_text: !!clipboard.ignore_short,
+                }),
+              });
+            })
+            .catch(function () {});
         }
         function doReset() {
           I("reset_settings")
@@ -926,6 +1046,7 @@
             .then(function (s) {
               settings = s;
               lang = (s.general || {}).language === "en" ? "en" : "zh";
+              applyTheme((s.general || {}).theme);
               render();
               fillForm();
             })

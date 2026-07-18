@@ -6,6 +6,8 @@ pub const DEFAULT_MAX_ITEMS: u32 = 2_000;
 pub const MIN_MAX_ITEMS: u32 = 500;
 pub const MAX_MAX_ITEMS: u32 = 5_000;
 pub const DEFAULT_RETENTION_DAYS: u32 = 30;
+pub const MIN_RETENTION_DAYS: u32 = 1;
+pub const MAX_RETENTION_DAYS: u32 = 365;
 pub const DEFAULT_MIN_LENGTH: usize = 2;
 pub const DEFAULT_MAX_LENGTH: usize = 10_000;
 pub const MAX_IGNORED_APPS: usize = 100;
@@ -75,7 +77,7 @@ impl ClipboardSettings {
     pub fn normalized(mut self, build_enabled: bool) -> Self {
         self.enabled &= build_enabled;
         self.max_items = normalize_max_items(self.max_items);
-        self.retention_days = DEFAULT_RETENTION_DAYS;
+        self.retention_days = normalize_retention_days(self.retention_days);
         self.min_length = DEFAULT_MIN_LENGTH;
         self.max_length = DEFAULT_MAX_LENGTH;
         self.ignored_apps = normalize_ignored_apps(self.ignored_apps);
@@ -104,6 +106,14 @@ impl ClipboardSettings {
 
 pub fn normalize_max_items(value: u32) -> u32 {
     value.clamp(MIN_MAX_ITEMS, MAX_MAX_ITEMS)
+}
+
+pub fn normalize_retention_days(value: u32) -> u32 {
+    if value == 0 {
+        0
+    } else {
+        value.clamp(MIN_RETENTION_DAYS, MAX_RETENTION_DAYS)
+    }
 }
 
 fn normalize_ignored_apps(values: Vec<String>) -> Vec<String> {
@@ -150,7 +160,7 @@ mod tests {
 
         assert!(!settings.enabled);
         assert_eq!(settings.max_items, MIN_MAX_ITEMS);
-        assert_eq!(settings.retention_days, DEFAULT_RETENTION_DAYS);
+        assert_eq!(settings.retention_days, 0);
         assert!(!settings.ignore_short_text);
         assert_eq!(settings.min_length, DEFAULT_MIN_LENGTH);
         assert_eq!(settings.max_length, DEFAULT_MAX_LENGTH);
@@ -165,6 +175,13 @@ mod tests {
         assert!(settings.enabled);
         assert_eq!(settings.max_items, 4_000);
         assert_eq!(settings.retention_days, DEFAULT_RETENTION_DAYS);
+    }
+
+    #[test]
+    fn normalizes_retention_days_without_forcing_default() {
+        assert_eq!(normalize_retention_days(0), 0);
+        assert_eq!(normalize_retention_days(7), 7);
+        assert_eq!(normalize_retention_days(500), MAX_RETENTION_DAYS);
     }
 
     #[test]

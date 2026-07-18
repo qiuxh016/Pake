@@ -197,12 +197,14 @@ impl ClipboardStore {
     pub fn cleanup(&self) -> rusqlite::Result<()> {
         let max_items = self.max_items.load(Ordering::Relaxed) as i64;
         let retention_days = self.retention_days.load(Ordering::Relaxed) as i64;
-        let cutoff = (Utc::now() - Duration::days(retention_days)).to_rfc3339();
         let conn = self.lock()?;
-        conn.execute(
-            "DELETE FROM clipboard_history WHERE created_at < ?1",
-            params![cutoff],
-        )?;
+        if retention_days > 0 {
+            let cutoff = (Utc::now() - Duration::days(retention_days)).to_rfc3339();
+            conn.execute(
+                "DELETE FROM clipboard_history WHERE created_at < ?1",
+                params![cutoff],
+            )?;
+        }
 
         let total: i64 = conn.query_row("SELECT COUNT(*) FROM clipboard_history", [], |row| {
             row.get(0)
@@ -364,6 +366,27 @@ mod tests {
         }
         store.cleanup().unwrap();
         assert_eq!(store.stats().unwrap().total, 0);
+        close(store, dir);
+    }
+
+    #[test]
+    fn keeps_expired_entries_when_retention_is_disabled() {
+        let dir = std::env::temp_dir().join(format!(
+            "pake-clipboard-retention-test-{}-{}",
+            std::process::id(),
+            Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        let store = ClipboardStore::open(&dir, 2_000, 0).unwrap();
+        store.insert("retained old item").unwrap();
+        {
+            let conn = store.lock().unwrap();
+            let old = (Utc::now() - Duration::days(365)).to_rfc3339();
+            conn.execute("UPDATE clipboard_history SET created_at = ?1", params![old])
+                .unwrap();
+        }
+        store.cleanup().unwrap();
+        assert_eq!(store.stats().unwrap().total, 1);
         close(store, dir);
     }
 

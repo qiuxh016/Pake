@@ -110,7 +110,10 @@ impl ClipboardState {
         Ok(())
     }
 
-    fn update_settings(&self, settings: ClipboardSettings) -> Result<ClipboardSettings, String> {
+    pub(crate) fn update_settings(
+        &self,
+        settings: ClipboardSettings,
+    ) -> Result<ClipboardSettings, String> {
         let settings = settings.normalized(self.build_enabled);
         if settings.enabled {
             self.ensure_store(&settings)?;
@@ -254,7 +257,15 @@ pub fn init_clipboard_state(
 ) -> Result<ClipboardState, String> {
     let data_dir = get_data_dir(app, package_name).map_err(|error| error.to_string())?;
     let settings_file = settings_path(&data_dir);
-    let settings = ClipboardSettings::load(&settings_file, clipboard, clipboard_max);
+    let mut settings = ClipboardSettings::load(&settings_file, clipboard, clipboard_max);
+    if clipboard {
+        let app_settings = crate::app::settings::load_settings(app);
+        settings.enabled = app_settings.clipboard.enabled;
+        settings.max_items = app_settings.clipboard.max_records;
+        settings.retention_days = app_settings.clipboard.retention_days;
+        settings.ignore_short_text = app_settings.clipboard.ignore_short;
+        settings = settings.normalized(clipboard);
+    }
     settings
         .save(&settings_file)
         .map_err(|error| error.to_string())?;
